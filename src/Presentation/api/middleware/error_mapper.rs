@@ -4,7 +4,7 @@ use diesel::result::Error as DieselError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use log::error as log_error;
 
-use crate::presentation::api::models::response::{ApiError, ApiResponse};
+use crate::presentation::api::responses::{ApiError, ApiResponse};
 use crate::presentation::api::validators::ValidationErrors;
 
 // Un tipo de error simple que implementa Send y Sync

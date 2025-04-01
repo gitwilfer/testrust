@@ -6,3 +6,4 @@ pub mod routes;
 pub mod validators;
 pub mod responses;
 pub mod adapters;
+pub mod models;

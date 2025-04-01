@@ -1,7 +1,14 @@
 // Este módulo contiene el controlador para el recurso de usuario.
 // Define los handlers para las rutas de usuario.
-use actix_web::{web, HttpResponse, Responder, post, get, put, delete, Error};
-use crate::application::use_cases::user::{CreateUserUseCase, FindUserByIdUseCase, FindUserByUsernameUseCase, FindAllUsersUseCase, UpdateUserUseCase, DeleteUserUseCase};
+use actix_web::{web, HttpResponse, post, get, put, delete, Error};
+use crate::application::use_cases::user::{
+    CreateUserUseCase, 
+    FindUserByIdUseCase, 
+    FindUserByUsernameUseCase, 
+    FindAllUsersUseCase, 
+    UpdateUserUseCase, 
+    DeleteUserUseCase
+};
 use crate::application::dtos::create_user_dto::CreateUserDto;
 use crate::application::dtos::update_user_dto::UpdateUserDto;
 use std::sync::Arc;
@@ -14,22 +21,23 @@ use crate::presentation::api::models::response::UserResponse;
 
 // Controlador para crear usuarios
 pub struct UserController {
-    pub create_user_use_case: Arc<CreateUserUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-    pub find_user_by_id_use_case: Arc<FindUserByIdUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-    pub find_user_by_username_use_case: Arc<FindUserByUsernameUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-    pub find_all_users_use_case: Arc<FindAllUsersUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-    pub update_user_use_case: Arc<UpdateUserUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-    pub delete_user_use_case: Arc<DeleteUserUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
+    // Utilizamos tipos de casos de uso sin especificar implementaciones concretas
+    pub create_user_use_case: Arc<dyn CreateUserUseCase>,
+    pub find_user_by_id_use_case: Arc<dyn FindUserByIdUseCase>,
+    pub find_user_by_username_use_case: Arc<dyn FindUserByUsernameUseCase>,
+    pub find_all_users_use_case: Arc<dyn FindAllUsersUseCase>,
+    pub update_user_use_case: Arc<dyn UpdateUserUseCase>,
+    pub delete_user_use_case: Arc<dyn DeleteUserUseCase>,
 }
 
 impl UserController {
     pub fn new(
-        create_user_use_case: Arc<CreateUserUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-        find_user_by_id_use_case: Arc<FindUserByIdUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-        find_user_by_username_use_case: Arc<FindUserByUsernameUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-        find_all_users_use_case: Arc<FindAllUsersUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-        update_user_use_case: Arc<UpdateUserUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
-        delete_user_use_case: Arc<DeleteUserUseCase<crate::infrastructure::repositories::UserRepositoryImpl>>,
+        create_user_use_case: Arc<dyn CreateUserUseCase>,
+        find_user_by_id_use_case: Arc<dyn FindUserByIdUseCase>,
+        find_user_by_username_use_case: Arc<dyn FindUserByUsernameUseCase>,
+        find_all_users_use_case: Arc<dyn FindAllUsersUseCase>,
+        update_user_use_case: Arc<dyn UpdateUserUseCase>,
+        delete_user_use_case: Arc<dyn DeleteUserUseCase>,
     ) -> Self {
         UserController {
             create_user_use_case,
@@ -41,7 +49,6 @@ impl UserController {
         }
     }
 }
-
 
 // Handler para la ruta POST /api/users
 #[post("")]
@@ -99,8 +106,23 @@ async fn find_user_by_id(
         .await;
 
     match result {
-        Ok(Some(user_response)) => Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None))),
-        Ok(None) => Ok(HttpResponse::NotFound().json(ApiResponse::<()>::error(ApiError::not_found("Usuario no encontrado")))),
+        Ok(user_dto) => {
+            // Mapeo explícito de UserResponseDto a UserResponse
+            let user_response = UserResponse {
+                id: user_dto.id,
+                username: user_dto.username,
+                first_name: user_dto.first_name,
+                last_name: user_dto.last_name,
+                email: user_dto.email,
+                created_by: user_dto.created_by,
+                created_at: user_dto.created_at,
+                modified_by: user_dto.modified_by,
+                modified_at: user_dto.modified_at,
+                status: user_dto.status,
+            };
+            
+            Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
+        },
         Err(e) => Err(map_error(e)),
     }
 }
@@ -117,8 +139,23 @@ async fn find_user_by_username(
         .await;
 
     match result {
-        Ok(Some(user_response)) => Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None))),
-        Ok(None) => Ok(HttpResponse::NotFound().json(ApiResponse::<()>::error(ApiError::not_found("Usuario no encontrado")))),
+        Ok(user_dto) => {
+            // Mapeo explícito de UserResponseDto a UserResponse
+            let user_response = UserResponse {
+                id: user_dto.id,
+                username: user_dto.username,
+                first_name: user_dto.first_name,
+                last_name: user_dto.last_name,
+                email: user_dto.email,
+                created_by: user_dto.created_by,
+                created_at: user_dto.created_at,
+                modified_by: user_dto.modified_by,
+                modified_at: user_dto.modified_at,
+                status: user_dto.status,
+            };
+            
+            Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
+        },
         Err(e) => Err(map_error(e)),
     }
 }
@@ -134,7 +171,26 @@ async fn find_all_users(
         .await;
 
     match result {
-        Ok(user_responses) => Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_responses), None))),
+        Ok(user_dtos) => {
+            // Mapeo explícito de cada UserResponseDto a UserResponse
+            let user_responses: Vec<UserResponse> = user_dtos
+                .into_iter()
+                .map(|user_dto| UserResponse {
+                    id: user_dto.id,
+                    username: user_dto.username,
+                    first_name: user_dto.first_name,
+                    last_name: user_dto.last_name,
+                    email: user_dto.email,
+                    created_by: user_dto.created_by,
+                    created_at: user_dto.created_at,
+                    modified_by: user_dto.modified_by,
+                    modified_at: user_dto.modified_at,
+                    status: user_dto.status,
+                })
+                .collect();
+            
+            Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_responses), None)))
+        },
         Err(e) => Err(map_error(e)),
     }
 }
@@ -195,8 +251,7 @@ async fn delete_user(
         .await;
 
     match result {
-        Ok(true) => Ok(HttpResponse::NoContent().json(ApiResponse::<()>::success(None, None))),
-        Ok(false) => Ok(HttpResponse::NotFound().json(ApiResponse::<()>::error(ApiError::not_found("Usuario no encontrado")))),
+        Ok(()) => Ok(HttpResponse::NoContent().finish()),
         Err(e) => Err(map_error(e)),
     }
 }
@@ -213,15 +268,3 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(find_user_by_username)
     );
 }
-
-/*pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/users")
-            .route("", web::post().to(create_user))
-            .route("", web::get().to(find_all_users))
-            .route("/{id}", web::get().to(find_user_by_id))
-            .route("/{id}", web::put().to(update_user))
-            .route("/{id}", web::delete().to(delete_user))
-            .route("/username/{username}", web::get().to(find_user_by_username))
-    );
-}*/
