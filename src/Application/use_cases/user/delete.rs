@@ -1,14 +1,14 @@
 use crate::application::errors::application_error::ApplicationError;
-use crate::domain::repositories::user_repository::UserRepository;
+use crate::application::ports::repositories::UserRepositoryPort;
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub struct DeleteUserUseCase<R: UserRepository> {
-    pub user_repository: Arc<R>,
+pub struct DeleteUserUseCase {
+    pub user_repository: Arc<dyn UserRepositoryPort>,
 }
 
-impl<R: UserRepository + Send + Sync + 'static> DeleteUserUseCase<R> {
-    pub fn new(user_repository: Arc<R>) -> Self {
+impl DeleteUserUseCase {
+    pub fn new(user_repository: Arc<dyn UserRepositoryPort>) -> Self {
         DeleteUserUseCase {
             user_repository,
         }
@@ -19,7 +19,7 @@ impl<R: UserRepository + Send + Sync + 'static> DeleteUserUseCase<R> {
         let user_exists = self.user_repository
             .find_by_id(id)
             .await
-            .map_err(|e| ApplicationError::InternalError(format!("Error al buscar usuario: {}", e)))?
+            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
             .is_some();
 
         if !user_exists {
@@ -28,13 +28,9 @@ impl<R: UserRepository + Send + Sync + 'static> DeleteUserUseCase<R> {
 
         // 2. Eliminar usuario
         self.user_repository
-            .transaction(|tx| {
-                Box::pin(async move {
-                    tx.delete(id).await
-                })
-            })
+            .delete(id)
             .await
-            .map_err(|e| ApplicationError::InternalError(format!("Error al eliminar el usuario: {}", e)))?;
+            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al eliminar el usuario: {}", e)))?;
 
         // 3. Devolver éxito
         Ok(())

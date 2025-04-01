@@ -1,18 +1,18 @@
 use crate::application::dtos::user_dto::UserResponseDto;
 use crate::application::errors::application_error::ApplicationError;
 use crate::application::mappers::user_mapper::UserMapper;
-use crate::domain::repositories::user_repository::UserRepository;
+use crate::application::ports::repositories::UserRepositoryPort;
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub struct FindUserByIdUseCase<R: UserRepository> {
-    pub user_repository: Arc<R>,
+pub struct FindUserByIdUseCase {
+    pub user_repository: Arc<dyn UserRepositoryPort>,
     pub user_mapper: Arc<UserMapper>,
 }
 
-impl<R: UserRepository + Send + Sync + 'static> FindUserByIdUseCase<R> {
+impl FindUserByIdUseCase {
     pub fn new(
-        user_repository: Arc<R>,
+        user_repository: Arc<dyn UserRepositoryPort>,
         user_mapper: Arc<UserMapper>,
     ) -> Self {
         FindUserByIdUseCase {
@@ -22,14 +22,18 @@ impl<R: UserRepository + Send + Sync + 'static> FindUserByIdUseCase<R> {
     }
 
     pub async fn execute(&self, id: Uuid) -> Result<UserResponseDto, ApplicationError> {
-        // 1. Buscar usuario por ID
+        // Buscar usuario por ID dentro de una transacción
         let user = self.user_repository
-            .find_by_id(id)
+            .transaction(|tx| {
+                Box::pin(async move {
+                    tx.find_by_id(id).await
+                })
+            })
             .await
-            .map_err(|e| ApplicationError::InternalError(format!("Error al buscar usuario: {}", e)))?
+            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
             .ok_or_else(|| ApplicationError::NotFound(format!("Usuario con ID {} no encontrado", id)))?;
-
-        // 2. Mapear a DTO y devolver
+    
+        // Mapear a DTO y devolver
         Ok(self.user_mapper.to_dto(user))
     }
 }

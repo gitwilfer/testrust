@@ -9,6 +9,8 @@ use uuid::Uuid;
 use crate::presentation::api::middleware::map_error;
 use crate::presentation::api::validators::validate_json;
 use crate::presentation::api::responses::{ApiResponse, ApiError};
+use crate::presentation::api::models::request::{CreateUserRequest, UpdateUserRequest};
+use crate::presentation::api::models::response::UserResponse;
 
 // Controlador para crear usuarios
 pub struct UserController {
@@ -49,6 +51,7 @@ async fn create_user(
 ) -> Result<HttpResponse, Error> {
     validate_json(&user_req)?;
 
+    // Mapeo explícito de CreateUserRequest a CreateUserDto
     let user_dto = CreateUserDto {
         username: user_req.username.clone(),
         first_name: user_req.first_name.clone(),
@@ -56,13 +59,30 @@ async fn create_user(
         email: user_req.email.clone(),
         password: user_req.password.clone(),
     };
+    
     let result = user_controller
         .create_user_use_case
-        .execute(user_dto.into_inner())
+        .execute(user_dto)
         .await;
 
     match result {
-        Ok(user_response) => Ok(HttpResponse::Created().json(ApiResponse::success(Some(user_response), None))),
+        Ok(user_dto) => {
+            // Mapeo explícito de UserResponseDto a UserResponse
+            let user_response = UserResponse {
+                id: user_dto.id,
+                username: user_dto.username,
+                first_name: user_dto.first_name,
+                last_name: user_dto.last_name,
+                email: user_dto.email,
+                created_by: user_dto.created_by,
+                created_at: user_dto.created_at,
+                modified_by: user_dto.modified_by,
+                modified_at: user_dto.modified_at,
+                status: user_dto.status,
+            };
+            
+            Ok(HttpResponse::Created().json(ApiResponse::success(Some(user_response), None)))
+        },
         Err(e) => Err(map_error(e)),
     }
 }
@@ -124,17 +144,41 @@ async fn find_all_users(
 async fn update_user(
     user_controller: web::Data<UserController>,
     id: web::Path<Uuid>,
-    user_dto: web::Json<UpdateUserDto>,
+    user_req: web::Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, Error> {
-    validate_json(&user_dto)?;
+    validate_json(&user_req)?;
+    
+    // Mapeo explícito de UpdateUserRequest a UpdateUserDto
+    let update_dto = UpdateUserDto {
+        first_name: user_req.first_name.clone(),
+        last_name: user_req.last_name.clone(),
+        email: user_req.email.clone(),
+        password: user_req.password.clone(),
+    };
+    
     let result = user_controller
         .update_user_use_case
-        .execute(id.into_inner(), user_dto.into_inner())
+        .execute(id.into_inner(), update_dto, None)
         .await;
 
     match result {
-        Ok(Some(user_response)) => Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None))),
-        Ok(None) => Ok(HttpResponse::NotFound().json(ApiResponse::<()>::error(ApiError::not_found("Usuario no encontrado")))),
+        Ok(user_dto) => {
+            // Mapeo explícito de UserResponseDto a UserResponse
+            let user_response = UserResponse {
+                id: user_dto.id,
+                username: user_dto.username,
+                first_name: user_dto.first_name,
+                last_name: user_dto.last_name,
+                email: user_dto.email,
+                created_by: user_dto.created_by,
+                created_at: user_dto.created_at,
+                modified_by: user_dto.modified_by,
+                modified_at: user_dto.modified_at,
+                status: user_dto.status,
+            };
+            
+            Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
+        },
         Err(e) => Err(map_error(e)),
     }
 }

@@ -1,3 +1,5 @@
+// Este archivo será marcado como deprecated y eventualmente eliminado
+
 use crate::domain::entities::user::User;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -5,6 +7,10 @@ use std::future::Future;
 use std::pin::Pin;
 use uuid::Uuid;
 
+#[deprecated(
+    since = "0.1.0",
+    note = "Por favor use UserRepositoryPort de la capa de aplicación"
+)]
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create(&self, user: User) -> Result<User>;

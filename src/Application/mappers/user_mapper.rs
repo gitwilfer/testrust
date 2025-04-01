@@ -1,9 +1,9 @@
 use crate::domain::entities::user::User;
-// use crate::infrastructure::persistence::models::UserModel; // <-- Eliminado
-use chrono::{Utc,DateTime,NaiveDateTime};
+use chrono::{Utc, NaiveDateTime};
 use uuid::Uuid;
 use crate::application::dtos::user_dto::UserResponseDto;
 use crate::application::dtos::update_user_dto::UpdateUserDto;
+
 pub struct UserMapper {}
 
 impl UserMapper {
@@ -12,7 +12,6 @@ impl UserMapper {
     }
 
     pub fn to_dto(&self, entity: User) -> UserResponseDto {
-
         UserResponseDto  {
             id: entity.id,
             username: entity.username,
@@ -27,4 +26,17 @@ impl UserMapper {
         }
     }
 
+    // Método para aplicar actualizaciones de un DTO a una entidad
+    pub fn apply_updates(&self, user: &mut User, update_dto: &UpdateUserDto) {
+        if let Some(first_name) = &update_dto.first_name {
+            user.first_name = first_name.clone();
+        }
+        if let Some(last_name) = &update_dto.last_name {
+            user.last_name = last_name.clone();
+        }
+        if let Some(email) = &update_dto.email {
+            user.email = email.clone();
+        }
+        // La contraseña se maneja por separado debido al hashing
+    }
 }

@@ -19,15 +19,4 @@ pub struct CreateUserDto {
     pub password: String,
 }
 
-// Implementación para facilitar la conversión desde modelos de request
-impl From<crate::presentation::api::models::request::CreateUserRequest> for CreateUserDto {
-    fn from(request: crate::presentation::api::models::request::CreateUserRequest) -> Self {
-        Self {
-            username: request.username,
-            first_name: request.first_name,
-            last_name: request.last_name,
-            email: request.email,
-            password: request.password,
-        }
-    }
-}
+// Eliminamos la implementación de From que creaba dependencia circular

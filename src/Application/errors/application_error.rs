@@ -29,4 +29,11 @@ pub enum ApplicationError {
     UnexpectedError(String),
 }
 
+// Implementación para convertir anyhow::Error en ApplicationError
+impl From<anyhow::Error> for ApplicationError {
+    fn from(err: anyhow::Error) -> Self {
+        ApplicationError::UnexpectedError(format!("{:?}", err))
+    }
+}
+
 // No incluimos conversiones a tipos HTTP aquí para mantener la independencia
