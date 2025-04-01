@@ -1,5 +1,4 @@
 use thiserror::Error;
-use std::fmt::{Display, Formatter, Result as FmtResult};
 
 /// Errores de la capa de aplicación
 /// 

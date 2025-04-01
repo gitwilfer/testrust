@@ -1,7 +1,7 @@
 // Este módulo contiene el controlador para el recurso de usuario.
 // Define los handlers para las rutas de usuario.
 use actix_web::{web, HttpResponse, post, get, put, delete, Error};
-use crate::application::use_cases::user::{
+use crate::application::use_cases::user::traits::{
     CreateUserUseCase, 
     FindUserByIdUseCase, 
     FindUserByUsernameUseCase, 
@@ -9,19 +9,19 @@ use crate::application::use_cases::user::{
     UpdateUserUseCase, 
     DeleteUserUseCase
 };
+use crate::application::ports::repositories::UserRepositoryPort;
 use crate::application::dtos::create_user_dto::CreateUserDto;
 use crate::application::dtos::update_user_dto::UpdateUserDto;
 use std::sync::Arc;
 use uuid::Uuid;
 use crate::presentation::api::middleware::map_error;
 use crate::presentation::api::validators::validate_json;
-use crate::presentation::api::responses::{ApiResponse, ApiError};
+use crate::presentation::api::responses::ApiResponse;
 use crate::presentation::api::models::request::{CreateUserRequest, UpdateUserRequest};
 use crate::presentation::api::models::response::UserResponse;
 
 // Controlador para crear usuarios
 pub struct UserController {
-    // Utilizamos tipos de casos de uso sin especificar implementaciones concretas
     pub create_user_use_case: Arc<dyn CreateUserUseCase>,
     pub find_user_by_id_use_case: Arc<dyn FindUserByIdUseCase>,
     pub find_user_by_username_use_case: Arc<dyn FindUserByUsernameUseCase>,
@@ -90,7 +90,7 @@ async fn create_user(
             
             Ok(HttpResponse::Created().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e)),
+        Err(e) => Err(map_error(e.into())),
     }
 }
 
@@ -123,7 +123,7 @@ async fn find_user_by_id(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e)),
+        Err(e) => Err(map_error(e.into())),
     }
 }
 
@@ -156,7 +156,7 @@ async fn find_user_by_username(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e)),
+        Err(e) => Err(map_error(e.into())),
     }
 }
 
@@ -191,7 +191,7 @@ async fn find_all_users(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_responses), None)))
         },
-        Err(e) => Err(map_error(e)),
+        Err(e) => Err(map_error(e.into())),
     }
 }
 
@@ -235,7 +235,7 @@ async fn update_user(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e)),
+        Err(e) => Err(map_error(e.into())),
     }
 }
 
@@ -252,7 +252,7 @@ async fn delete_user(
 
     match result {
         Ok(()) => Ok(HttpResponse::NoContent().finish()),
-        Err(e) => Err(map_error(e)),
+        Err(e) => Err(map_error(e.into())),
     }
 }
 
