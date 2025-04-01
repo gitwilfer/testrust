@@ -78,13 +78,7 @@ impl CreateUserUseCase {
         };
 
         // 5. Guardar en repositorio dentro de una transacción
-        let created_user = self.user_repository
-            .transaction(|tx| {
-                Box::pin(async move {
-                    tx.create(new_user).await
-                })
-            })
-            .await
+        let created_user = self.user_repository.create(new_user).await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al crear el usuario: {}", e)))?;
 
         // 6. Mapear a DTO de respuesta
@@ -93,7 +87,7 @@ impl CreateUserUseCase {
 }
 
 #[async_trait::async_trait]
-impl CreateUserUseCaseTrait for CreateUserUseCase {
+impl crate::application::use_cases::traits::CreateUserUseCase for CreateUserUseCase {
     async fn execute(&self, user_dto: CreateUserDto) -> Result<UserResponseDto, ApplicationError> {
         self.execute(user_dto).await
     }

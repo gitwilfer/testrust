@@ -22,13 +22,7 @@ impl FindAllUsersUseCase {
 
     pub async fn execute(&self) -> Result<Vec<UserResponseDto>, ApplicationError> {
         // 1. Obtener todos los usuarios del repositorio dentro de una transacción
-        let users = self.user_repository
-            .transaction(|tx| {
-                Box::pin(async move {
-                    tx.find_all().await
-                })
-            })
-            .await
+        let users = self.user_repository.find_all().await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al obtener usuarios: {}", e)))?;
     
         // 2. Mapear cada usuario a un DTO
@@ -39,5 +33,12 @@ impl FindAllUsersUseCase {
     
         // 3. Devolver la lista de DTOs
         Ok(user_dtos)
+    }
+}
+
+#[async_trait::async_trait]
+impl crate::application::use_cases::traits::FindAllUsersUseCase for FindAllUsersUseCase {
+    async fn execute(&self) -> Result<Vec<UserResponseDto>, ApplicationError> {
+        self.execute().await
     }
 }

@@ -28,17 +28,18 @@ impl FindUserByUsernameUseCase {
     
         // 2. Buscar usuario por username dentro de una transacción
         let username_clone = username.to_string(); // Clonar para mover dentro del closure
-        let user = self.user_repository
-            .transaction(|tx| {
-                Box::pin(async move {
-                    tx.find_by_username(&username_clone).await
-                })
-            })
-            .await
+        let user = self.user_repository.find_by_username(&username_clone).await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
             .ok_or_else(|| ApplicationError::NotFound(format!("Usuario con username '{}' no encontrado", username)))?;
     
         // 3. Mapear a DTO y devolver
         Ok(self.user_mapper.to_dto(user))
+    }
+}
+
+#[async_trait::async_trait]
+impl crate::application::use_cases::traits::FindUserByUsernameUseCase for FindUserByUsernameUseCase {
+    async fn execute(&self, username: &str) -> Result<UserResponseDto, ApplicationError> {
+        self.execute(username).await
     }
 }

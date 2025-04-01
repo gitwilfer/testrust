@@ -28,9 +28,7 @@ impl UpdateUserUseCase {
     }
 
     async fn validate_unique_email(&self, id: Uuid, email: &str) -> Result<(), ApplicationError> {
-        let existing_user = self.user_repository
-            .find_by_email(email)
-            .await
+        let existing_user = self.user_repository.find_by_email(email).await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario por email: {}", e)))?;
             
         if let Some(user) = existing_user {
@@ -48,9 +46,7 @@ impl UpdateUserUseCase {
         }
 
         // 2. Verificar que el usuario existe
-        let mut user = self.user_repository
-            .find_by_id(id)
-            .await
+        let mut user = self.user_repository.find_by_id(id).await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
             .ok_or_else(|| ApplicationError::NotFound(format!("Usuario con ID {} no encontrado", id)))?;
 
@@ -82,16 +78,17 @@ impl UpdateUserUseCase {
         user.modified_at = Some(Utc::now().naive_utc());
 
         // 7. Guardar en repositorio
-        let updated_user = self.user_repository
-            .transaction(|tx| {
-                Box::pin(async move {
-                    tx.update(user).await
-                })
-            })
-            .await
+        let updated_user = self.user_repository.update(user).await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al actualizar el usuario: {}", e)))?;
 
         // 8. Mapear a DTO de respuesta
         Ok(self.user_mapper.to_dto(updated_user))
+    }
+}
+
+#[async_trait::async_trait]
+impl crate::application::use_cases::traits::UpdateUserUseCase for UpdateUserUseCase {
+    async fn execute(&self, id: Uuid, update_dto: UpdateUserDto, modified_by: Option<Uuid>) -> Result<UserResponseDto, ApplicationError> {
+        self.execute(id, update_dto, modified_by).await
     }
 }
