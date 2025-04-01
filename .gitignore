@@ -1,0 +1,64 @@
+
+# Archivos y directorios específicos de Rust
+/target/
+/test/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# Archivos de entorno y configuración local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+Modelfile
+database_schema.sql
+
+# Archivos de IDE y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Archivos de base de datos
+*.sqlite
+*.sqlite3
+*.db
+
+# Archivos de caché
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de logs
+*.log
+logs/
+
+# Archivos temporales
+*.tmp
+*.temp
+.temp/
+
+# Archivos de compilación
+/dist/
+/build/
+
+# Archivos específicos de DDD (si aplica)
+/infrastructure/persistence/migrations/*.backup
+
+# Archivos de documentación generados
+/docs/generated/
+
+# Archivos de prueba y cobertura
+/coverage/
+.coverage
+htmlcov/
+
+# Archivos específicos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos específicos de CodeGPT
+.codegpt
