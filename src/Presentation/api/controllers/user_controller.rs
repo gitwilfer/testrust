@@ -89,12 +89,13 @@ async fn create_user(
             
             Ok(HttpResponse::Created().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e.into())),
+        // Aquí es donde aplicamos el cambio
+        Err(app_error) => {
+            // Convertimos ApplicationError directamente en HttpResponse usando el adaptador
+            Ok(crate::presentation::api::adapters::ErrorAdapter::map_application_error(app_error))
+        },
     }
 }
-
-// ... Resto del código del controlador sin cambios ...
-
 // Handler para la ruta GET /api/users/{id}
 #[get("/{id}")]
 async fn find_user_by_id(

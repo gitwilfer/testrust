@@ -1,6 +1,4 @@
 use crate::domain::entities::user::User;
-use chrono::{Utc, NaiveDateTime};
-use uuid::Uuid;
 use crate::application::dtos::user_dto::UserResponseDto;
 use crate::application::dtos::update_user_dto::UpdateUserDto;
 
@@ -12,7 +10,7 @@ impl UserMapper {
     }
 
     pub fn to_dto(&self, entity: User) -> UserResponseDto {
-        UserResponseDto  {
+        UserResponseDto {
             id: entity.id,
             username: entity.username,
             first_name: entity.first_name,
@@ -22,7 +20,7 @@ impl UserMapper {
             created_at: entity.created_at,
             modified_by: entity.modified_by,
             modified_at: entity.modified_at,
-            status: entity.status,
+            status: entity.status as i32, // Convertir i16 a i32
         }
     }
 
