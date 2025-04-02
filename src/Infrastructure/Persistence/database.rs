@@ -264,7 +264,7 @@ pub fn check_database_health() -> HashMap<String, bool> {
     let manager = DB_MANAGER.lock().unwrap();
     manager.check_health()
 }
-
+   
 pub fn initialize_with_config(config: &AppConfig) -> Result<(), Box<dyn std::error::Error>> {
     info!("Inicializando conexiones a bases de datos desde configuración");
     
