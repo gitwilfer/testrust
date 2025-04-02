@@ -6,6 +6,7 @@ use uuid::Uuid;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 
+//use crate::application::ports::repositories::TransactionalUserRepository;
 use crate::application::ports::repositories::UserRepositoryPort;
 use crate::application::services::{get_database_for_entity, get_default_database};
 use crate::domain::entities::user::User;
