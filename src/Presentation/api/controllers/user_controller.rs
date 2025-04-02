@@ -1,7 +1,7 @@
 // Este módulo contiene el controlador para el recurso de usuario.
 // Define los handlers para las rutas de usuario.
 use actix_web::{web, HttpResponse, post, get, put, delete, Error};
-use crate::application::use_cases::traits::{
+use crate::application::use_cases::{
     CreateUserUseCase, 
     FindUserByIdUseCase, 
     FindUserByUsernameUseCase, 
@@ -92,6 +92,8 @@ async fn create_user(
         Err(e) => Err(map_error(e.into())),
     }
 }
+
+// ... Resto del código del controlador sin cambios ...
 
 // Handler para la ruta GET /api/users/{id}
 #[get("/{id}")]
