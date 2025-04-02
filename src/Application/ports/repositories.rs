@@ -18,6 +18,21 @@ pub trait UserRepositoryPort: Send + Sync {
     async fn find_all(&self) -> Result<Vec<User>>;
 }
 
+/// Puerto para transacciones
+#[async_trait]
+pub trait TransactionalUserRepository: UserRepositoryPort {
+    /// Ejecuta una función dentro de una transacción
+    async fn transaction<F, Fut, R>(&self, f: F) -> Result<R>
+    where
+        F: FnOnce(&dyn UserRepositoryPort) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<R>> + Send + 'static,
+        R: Send + 'static;
+        
+    /// Métodos específicos para transacciones comunes
+    async fn create_in_transaction(&self, user: User) -> Result<User>;
+    async fn update_in_transaction(&self, user: User) -> Result<User>;
+}
+
 /// Puerto para el servicio de autenticación
 #[async_trait]
 pub trait AuthServicePort: Send + Sync {

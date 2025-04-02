@@ -8,9 +8,9 @@ diesel::table! {
         apellido -> Text,
         correo_electronico -> Text,
         password_hash -> Text,
-        creado_por -> Nullable<Text>,
+        creado_por -> Nullable<Uuid>,
         fecha_creacion -> Timestamp,
-        modificado_por -> Nullable<Text>,
+        modificado_por -> Nullable<Uuid>,
         fecha_modificacion -> Nullable<Timestamp>,
         status -> Int2,
     }

@@ -1,9 +1,9 @@
-// Modificación en src/Infrastructure/Persistence/models/user_model.rs
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 use diesel::prelude::*;
 use crate::infrastructure::persistence::schema::usuarios;
 
+// Quitar AsChangeset ya que está causando problemas con UUID
 #[derive(Debug, Queryable, Insertable)]
 #[diesel(table_name = usuarios)]
 pub struct UserModel {
