@@ -33,10 +33,13 @@ impl UserRepositoryImpl {
         Ok(Self { pool })
     }
     
-    // Método auxiliar para obtener una conexión
-    async fn get_connection(&self) -> Result<DbConnection> {
-        Ok(self.pool.get()?)
-    }
+        // Método auxiliar para obtener una conexión
+        // Modifica la función get_connection
+        async fn get_connection(&self) -> Result<DbConnection> {
+            // Determinar qué base de datos usar para los usuarios
+            let db_name = get_database_for_entity("user");
+            Ok(database::get_connection(&db_name)?)
+        }
 
     // Método para ejecutar una operación dentro de una transacción
     async fn with_transaction<F, R>(&self, f: F) -> Result<R>
@@ -226,5 +229,39 @@ impl TransactionalUserRepository for UserRepositoryImpl {
         });
         
         result
+    }
+    async fn create_in_transaction(&self, user: User) -> Result<User> {
+        let mut conn = self.get_connection().await?;
+        let user_model = user_to_model(&user);
+        
+        conn.transaction(|conn| {
+            diesel::insert_into(users::table)
+                .values(&user_model)
+                .execute(conn)
+                .map_err(|e| anyhow::anyhow!("Error en transacción: {}", e))
+                .map(|_| user.clone())
+        })
+    }
+    
+    async fn update_in_transaction(&self, user: User) -> Result<User> {
+        let mut conn = self.get_connection().await?;
+        let user_model = user_to_model(&user);
+        
+        conn.transaction(|conn| {
+            // En lugar de usar set(), actualizamos campo por campo
+            diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
+                .set((
+                    users::nombre.eq(&user_model.first_name),
+                    users::apellido.eq(&user_model.last_name),
+                    users::correo_electronico.eq(&user_model.email),
+                    users::password_hash.eq(&user_model.password),
+                    users::modificado_por.eq(&user_model.modified_by),
+                    users::fecha_modificacion.eq(&user_model.modified_at),
+                    users::status.eq(&user_model.status),
+                ))
+                .execute(conn)
+                .map_err(|e| anyhow::anyhow!("Error en transacción de actualización: {}", e))
+                .map(|_| user.clone())
+        })
     }
 }

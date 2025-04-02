@@ -15,14 +15,14 @@ use std::sync::Arc;
 /// Este caso de uso implementa la lógica de negocio para crear un nuevo usuario,
 /// validando los datos, verificando unicidad y persistiendo la entidad.
 pub struct CreateUserUseCase {
-    user_repository: Arc<dyn TransactionalUserRepository>,
+    user_repository: Arc<dyn UserRepositoryPort>,
     auth_service: Arc<dyn AuthServicePort>,
     user_mapper: Arc<UserMapper>,
 }
 
 impl CreateUserUseCase {
     pub fn new(
-        user_repository: Arc<dyn TransactionalUserRepository>,
+        user_repository: Arc<dyn UserRepositoryPort>,
         auth_service: Arc<dyn AuthServicePort>,
         user_mapper: Arc<UserMapper>,
     ) -> Self {

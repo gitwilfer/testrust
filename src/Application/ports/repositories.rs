@@ -1,11 +1,9 @@
+// Modificación en src/Application/ports/repositories.rs
 use async_trait::async_trait;
 use uuid::Uuid;
 use anyhow::Result;
-use std::future::Future;
-use std::pin::Pin;
 use crate::domain::entities::user::User;
 
-/// Puerto para el repositorio de usuarios - operaciones básicas
 #[async_trait]
 pub trait UserRepositoryPort: Send + Sync {
     async fn create(&self, user: User) -> Result<User>;
@@ -15,17 +13,10 @@ pub trait UserRepositoryPort: Send + Sync {
     async fn update(&self, user: User) -> Result<User>;
     async fn delete(&self, id: Uuid) -> Result<()>;
     async fn find_all(&self) -> Result<Vec<User>>;
-}
-
-/// Puerto para transacciones
-#[async_trait]
-pub trait TransactionalUserRepository: UserRepositoryPort {
-    /// Ejecuta una función dentro de una transacción
-    async fn transaction<F, Fut, R>(&self, f: F) -> Result<R>
-    where
-        F: FnOnce(&dyn UserRepositoryPort) -> Fut + Send + 'static,
-        Fut: Future<Output = Result<R>> + Send + 'static,
-        R: Send + 'static;
+    
+    // Añadir métodos transaccionales específicos en lugar de un método genérico
+    async fn create_in_transaction(&self, user: User) -> Result<User>;
+    async fn update_in_transaction(&self, user: User) -> Result<User>;
 }
 
 /// Puerto para el servicio de autenticación

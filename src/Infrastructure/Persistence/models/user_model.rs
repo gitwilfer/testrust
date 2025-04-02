@@ -1,9 +1,10 @@
+// Modificación en src/Infrastructure/Persistence/models/user_model.rs
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 use diesel::prelude::*;
 use crate::infrastructure::persistence::schema::usuarios;
 
-#[derive(Debug, Queryable, Insertable, AsChangeset)]
+#[derive(Debug, Queryable, Insertable)]
 #[diesel(table_name = usuarios)]
 pub struct UserModel {
     #[diesel(column_name = idx_usuario)]
