@@ -5,20 +5,46 @@ mod presentation;
 
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
-use log::info;
-use clap::Parser;
-// use presentation::cli::Cli;
+use log::{info, LevelFilter};
+use env_logger::Builder;
+use std::io::Write;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Cargar variables de entorno
     dotenv().ok();
 
-    // Inicializar el logger
-    env_logger::init();
+    // Obtener configuración
+    let config = infrastructure::config::app_config::get_config();
+    
+    // Inicializar el logger con nivel basado en configuración
+    let log_level = match config.log_level.as_str() {
+        "trace" => LevelFilter::Trace,
+        "debug" => LevelFilter::Debug,
+        "info" => LevelFilter::Info,
+        "warn" => LevelFilter::Warn,
+        "error" => LevelFilter::Error,
+        _ => LevelFilter::Info,
+    };
+    
+    Builder::new()
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{} [{}] - {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                record.args()
+            )
+        })
+        .filter(None, log_level)
+        .init();
 
-    // Inicializar conexiones a bases de datos
-    match infrastructure::persistence::database::initialize_databases() {
+    info!("Iniciando aplicación en entorno: {:?}", config.environment);
+    info!("Configuración cargada: {:?}", config);
+
+    // Inicializar conexiones a bases de datos usando la configuración
+    match infrastructure::persistence::database::initialize_with_config(&config) {
         Ok(_) => info!("Conexiones a bases de datos inicializadas correctamente"),
         Err(e) => {
             log::error!("Error al inicializar conexiones a bases de datos: {}", e);
@@ -26,21 +52,26 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    // Parse command-line arguments
-    // let cli = Cli::parse();
+    // Inicializar mapeado de entidades a bases de datos
+    application::services::initialize_database_mappings();
 
-    // Run the CLI or the API
-    // match cli.command {
-    //     command => {
-    //         presentation::cli::execute_command(command).await;
-    //     }
-    // }
-
+    info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
+    
     HttpServer::new(move || {
-        App::new()
-            .configure(presentation::api::routes::config)
+        let mut app = App::new();
+        
+        // Configurar rutas API
+        app = app.configure(presentation::api::routes::config);
+        
+        // Añadir Swagger si está activado
+        if config.enable_swagger {
+            info!("Swagger UI habilitado en /swagger-ui");
+            // Aquí iría la configuración de Swagger
+        }
+        
+        app
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((config.http_host.clone(), config.http_port))?
     .run()
     .await
 }

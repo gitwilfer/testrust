@@ -17,12 +17,14 @@ pub trait UserRepositoryPort: Send + Sync {
     async fn find_all(&self) -> Result<Vec<User>>;
 }
 
-/// Puerto para transacciones (separado para object safety)
+/// Puerto para transacciones
+#[async_trait]
 pub trait TransactionalUserRepository: UserRepositoryPort {
-    // Versión simplificada que evita problemas con lifetimes
-    async fn execute_transaction<F, R>(&self, operation: F) -> Result<R>
+    /// Ejecuta una función dentro de una transacción
+    async fn transaction<F, Fut, R>(&self, f: F) -> Result<R>
     where
-        F: FnOnce() -> Pin<Box<dyn Future<Output = Result<R>> + Send>> + Send + 'static,
+        F: FnOnce(&dyn UserRepositoryPort) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<R>> + Send + 'static,
         R: Send + 'static;
 }
 

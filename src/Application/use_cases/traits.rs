@@ -34,3 +34,9 @@ pub trait UpdateUserUseCase: Send + Sync {
 pub trait DeleteUserUseCase: Send + Sync {
     async fn execute(&self, id: Uuid) -> Result<(), ApplicationError>;
 }
+
+
+#[async_trait]
+pub trait LoginUseCase: Send + Sync {
+    async fn execute(&self, dto: LoginDto) -> Result<TokenDto, ApplicationError>;
+}

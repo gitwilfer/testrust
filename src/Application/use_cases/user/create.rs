@@ -4,6 +4,7 @@ use crate::application::errors::application_error::ApplicationError;
 use crate::application::mappers::user_mapper::UserMapper;
 use crate::application::ports::repositories::{UserRepositoryPort, AuthServicePort};
 use crate::application::validators::user_validator::UserValidator;
+use crate::application::ports::repositories::TransactionalUserRepository;
 use crate::domain::entities::user::User;
 use chrono::Utc;
 use uuid::Uuid;
@@ -14,14 +15,14 @@ use std::sync::Arc;
 /// Este caso de uso implementa la lógica de negocio para crear un nuevo usuario,
 /// validando los datos, verificando unicidad y persistiendo la entidad.
 pub struct CreateUserUseCase {
-    user_repository: Arc<dyn UserRepositoryPort>,
+    user_repository: Arc<dyn TransactionalUserRepository>,
     auth_service: Arc<dyn AuthServicePort>,
     user_mapper: Arc<UserMapper>,
 }
 
 impl CreateUserUseCase {
     pub fn new(
-        user_repository: Arc<dyn UserRepositoryPort>,
+        user_repository: Arc<dyn TransactionalUserRepository>,
         auth_service: Arc<dyn AuthServicePort>,
         user_mapper: Arc<UserMapper>,
     ) -> Self {

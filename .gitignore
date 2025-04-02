@@ -12,6 +12,7 @@ Cargo.lock
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
 .gitignore
 Modelfile
 database_schema.sql
