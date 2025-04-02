@@ -15,3 +15,11 @@ diesel::table! {
         status -> Int2,
     }
 }
+
+// Alias para hacer más sencilla la referencia
+pub mod users {
+    pub use super::usuarios::dsl::*;
+    
+    // Define el alias table para que schema::users::table funcione
+    pub const table: super::usuarios::table = super::usuarios::table;
+}

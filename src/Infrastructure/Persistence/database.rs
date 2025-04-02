@@ -59,7 +59,7 @@ impl DatabaseManager {
             },
             None => {
                 error!("Pool de conexiones no encontrado: {}", name);
-                Err(PoolError::BadPool)
+                Err(PoolError::ConnectionError(r2d2::Error::ConnectionError("Pool not found".into())))
             }
         }
     }

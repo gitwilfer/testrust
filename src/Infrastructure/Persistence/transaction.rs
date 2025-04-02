@@ -1,5 +1,6 @@
 use diesel::PgConnection;
 use std::error::Error;
+use diesel::Connection;
 
 pub fn execute_transaction<T, F>(
     conn: &mut PgConnection,
