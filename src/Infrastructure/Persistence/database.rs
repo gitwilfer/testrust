@@ -1,3 +1,4 @@
+use crate::infrastructure::config::AppConfig;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection, PoolError};
 use diesel::PgConnection;
 use lazy_static::lazy_static;
@@ -278,4 +279,15 @@ pub fn initialize_with_config(config: &AppConfig) -> Result<(), Box<dyn std::err
     }
     
     Ok(())
+}
+
+pub fn get_pool_from_connection() -> Pool<ConnectionManager<PgConnection>> {
+    let manager = DB_MANAGER.lock().unwrap();
+    match &manager.default_db {
+        Some(name) => match manager.pools.get(name) {
+            Some(pool) => pool.clone(),
+            None => panic!("No hay pool de conexiones para la base de datos predeterminada")
+        },
+        None => panic!("No hay base de datos predeterminada configurada")
+    }
 }

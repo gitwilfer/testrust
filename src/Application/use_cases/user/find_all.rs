@@ -1,17 +1,17 @@
 use crate::application::dtos::user_dto::UserResponseDto;
 use crate::application::errors::application_error::ApplicationError;
 use crate::application::mappers::user_mapper::UserMapper;
-use crate::application::ports::repositories::TransactionalUserRepository;
+use crate::application::ports::repositories::UserRepositoryPort;
 use std::sync::Arc;
 
 pub struct FindAllUsersUseCase {
-    pub user_repository: Arc<dyn TransactionalUserRepository>,
+    pub user_repository: Arc<dyn UserRepositoryPort>,
     pub user_mapper: Arc<UserMapper>,
 }
 
 impl FindAllUsersUseCase {
     pub fn new(
-        user_repository: Arc<dyn TransactionalUserRepository>,
+        user_repository: Arc<dyn UserRepositoryPort>,
         user_mapper: Arc<UserMapper>,
     ) -> Self {
         FindAllUsersUseCase {

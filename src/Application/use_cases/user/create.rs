@@ -4,7 +4,6 @@ use crate::application::errors::application_error::ApplicationError;
 use crate::application::mappers::user_mapper::UserMapper;
 use crate::application::ports::repositories::{UserRepositoryPort, AuthServicePort};
 use crate::application::validators::user_validator::UserValidator;
-use crate::application::ports::repositories::TransactionalUserRepository;
 use crate::domain::entities::user::User;
 use chrono::Utc;
 use uuid::Uuid;

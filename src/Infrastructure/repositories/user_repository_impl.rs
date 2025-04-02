@@ -1,15 +1,12 @@
-// src/infrastructure/repositories/user_repository_impl.rs
+// src/Infrastructure/repositories/user_repository_impl.rs
 use async_trait::async_trait;
 use anyhow::Result;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 use uuid::Uuid;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::connection::TransactionManager;
 
-use crate::application::ports::repositories::{UserRepositoryPort, TransactionalUserRepository};
+use crate::application::ports::repositories::UserRepositoryPort;
 use crate::application::services::{get_database_for_entity, get_default_database};
 use crate::domain::entities::user::User;
 use crate::infrastructure::persistence::database::{self, DbConnection};
@@ -25,21 +22,24 @@ pub struct UserRepositoryImpl {
 impl UserRepositoryImpl {
     pub fn new() -> Result<Self> {
         // Obtenemos el pool de conexiones desde el gestor de bases de datos
-        let pool = match database::get_pool("main") {
-            Some(pool) => Arc::new(pool.clone()),
-            None => return Err(anyhow::anyhow!("No se pudo obtener el pool de conexiones principal")),
+        let pool = match database::get_default_connection() {
+            Ok(conn) => {
+                // Si podemos obtener una conexión, entonces tenemos acceso al pool
+                let conn_ref = conn;
+                drop(conn_ref); // Liberamos la conexión
+                Arc::new(database::get_pool_from_connection())
+            },
+            Err(_) => return Err(anyhow::anyhow!("No se pudo obtener el pool de conexiones principal")),
         };
         
         Ok(Self { pool })
     }
     
-        // Método auxiliar para obtener una conexión
-        // Modifica la función get_connection
-        async fn get_connection(&self) -> Result<DbConnection> {
-            // Determinar qué base de datos usar para los usuarios
-            let db_name = get_database_for_entity("user");
-            Ok(database::get_connection(&db_name)?)
-        }
+    // Método auxiliar para obtener una conexión
+    async fn get_connection(&self) -> Result<DbConnection> {
+        let db_name = get_database_for_entity("user");
+        database::get_connection(&db_name)
+    }
 
     // Método para ejecutar una operación dentro de una transacción
     async fn with_transaction<F, R>(&self, f: F) -> Result<R>

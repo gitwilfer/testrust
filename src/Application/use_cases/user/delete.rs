@@ -1,14 +1,14 @@
 use crate::application::errors::application_error::ApplicationError;
-use crate::application::ports::repositories::TransactionalUserRepository;
+use crate::application::ports::repositories::UserRepositoryPort;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct DeleteUserUseCase {
-    pub user_repository: Arc<dyn TransactionalUserRepository>,
+    pub user_repository: Arc<dyn UserRepositoryPort>,
 }
 
 impl DeleteUserUseCase {
-    pub fn new(user_repository: Arc<dyn TransactionalUserRepository>) -> Self {
+    pub fn new(user_repository: Arc<dyn UserRepositoryPort>) -> Self {
         DeleteUserUseCase {
             user_repository,
         }

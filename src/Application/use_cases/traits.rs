@@ -3,6 +3,7 @@ use uuid::Uuid;
 use crate::application::dtos::user_dto::UserResponseDto;
 use crate::application::dtos::create_user_dto::CreateUserDto;
 use crate::application::dtos::update_user_dto::UpdateUserDto;
+use crate::application::dtos::auth_dto::{LoginDto, TokenDto};
 use crate::application::errors::application_error::ApplicationError;
 
 #[async_trait]
