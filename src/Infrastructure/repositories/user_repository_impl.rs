@@ -1,23 +1,46 @@
+// src/infrastructure/repositories/user_repository_impl.rs
+use async_trait::async_trait;
+use anyhow::Result;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
+use uuid::Uuid;
+use diesel::prelude::*;
+use diesel::r2d2::{ConnectionManager, Pool};
+
 use crate::application::ports::repositories::UserRepositoryPort;
 use crate::domain::entities::user::User;
-use crate::infrastructure::persistence::database;
+use crate::infrastructure::persistence::database::{self, DbConnection};
 use crate::infrastructure::persistence::models::user_model::UserModel;
 use crate::infrastructure::persistence::schema::users;
 use crate::infrastructure::persistence::mapper::{user_to_model, model_to_user};
-use diesel::prelude::*;
-use diesel::result::Error as DieselError;
-use anyhow::Result;
-use async_trait::async_trait;
-use std::future::Future;
-use std::pin::Pin;
-use uuid::Uuid;
 
-pub struct UserRepositoryImpl;
+pub struct UserRepositoryImpl {
+    // Podemos guardar el pool de conexiones aquí para mayor eficiencia
+    pool: Arc<Pool<ConnectionManager<diesel::PgConnection>>>,
+}
+
+impl UserRepositoryImpl {
+    pub fn new() -> Result<Self> {
+        // Obtenemos el pool de conexiones desde el gestor de bases de datos
+        let pool = match database::get_pool("main") {
+            Some(pool) => Arc::new(pool.clone()),
+            None => return Err(anyhow::anyhow!("No se pudo obtener el pool de conexiones principal")),
+        };
+        
+        Ok(Self { pool })
+    }
+    
+    // Método auxiliar para obtener una conexión
+    async fn get_connection(&self) -> Result<DbConnection> {
+        Ok(self.pool.get()?)
+    }
+}
 
 #[async_trait]
 impl UserRepositoryPort for UserRepositoryImpl {
     async fn create(&self, user: User) -> Result<User> {
-        let mut conn = database::get_main_connection()?;
+        let mut conn = self.get_connection().await?;
         let user_model = user_to_model(&user);
         
         diesel::insert_into(users::table)
@@ -28,7 +51,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
     }
     
     async fn find_by_id(&self, id: Uuid) -> Result<Option<User>> {
-        let mut conn = database::get_main_connection()?;
+        let mut conn = self.get_connection().await?;
         
         let result = users::table
             .filter(users::idx_usuario.eq(id))
@@ -39,7 +62,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
     }
     
     async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
-        let mut conn = database::get_main_connection()?;
+        let mut conn = self.get_connection().await?;
         
         let result = users::table
             .filter(users::correo_electronico.eq(email))
@@ -50,7 +73,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
     }
     
     async fn find_by_username(&self, username: &str) -> Result<Option<User>> {
-        let mut conn = database::get_main_connection()?;
+        let mut conn = self.get_connection().await?;
         
         let result = users::table
             .filter(users::usuario.eq(username))
@@ -61,7 +84,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
     }
     
     async fn update(&self, user: User) -> Result<User> {
-        let mut conn = database::get_main_connection()?;
+        let mut conn = self.get_connection().await?;
         let user_model = user_to_model(&user);
         
         diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
@@ -72,7 +95,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
     }
     
     async fn delete(&self, id: Uuid) -> Result<()> {
-        let mut conn = database::get_main_connection()?;
+        let mut conn = self.get_connection().await?;
         
         let affected = diesel::delete(users::table.filter(users::idx_usuario.eq(id)))
             .execute(&mut conn)?;
@@ -85,26 +108,30 @@ impl UserRepositoryPort for UserRepositoryImpl {
     }
     
     async fn find_all(&self) -> Result<Vec<User>> {
-        let mut conn = database::get_main_connection()?;
+        let mut conn = self.get_connection().await?;
         
         let models = users::table
             .load::<UserModel>(&mut conn)?;
         
         Ok(models.iter().map(|model| model_to_user(model)).collect())
     }
-    
-    async fn transaction<F, R>(&self, f: F) -> Result<R>
+}
+
+// Implementación para soporte de transacciones
+#[async_trait]
+impl crate::application::ports::repositories::TransactionalUserRepository for UserRepositoryImpl {
+    async fn execute_transaction<F, R>(&self, operation: F) -> Result<R>
     where
-        F: FnOnce(Box<dyn UserRepositoryPort + '_>) -> Pin<Box<dyn Future<Output = Result<R>> + Send + '_>> + Send,
+        F: FnOnce() -> Pin<Box<dyn Future<Output = Result<R>> + Send>> + Send + 'static,
         R: Send + 'static,
     {
-        // Esta implementación es simplificada pero funcional para el ejemplo
-        // En un entorno de producción, se necesitaría una implementación más robusta
+        let mut conn = self.get_connection().await?;
         
-        // Crear una nueva instancia temporal del repositorio para la transacción
-        let repo = Box::new(Self {}) as Box<dyn UserRepositoryPort>;
-        
-        // Ejecutar la función en el contexto del nuevo repositorio
-        f(repo).await
+        conn.transaction(|conn| {
+            let fut = operation();
+            Box::pin(async move {
+                fut.await
+            })
+        })
     }
 }
