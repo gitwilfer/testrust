@@ -4,7 +4,7 @@ use thiserror::Error;
 /// 
 /// Estos errores son independientes de la capa de presentación y representan
 /// problemas de negocio, no de HTTP o presentación.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]  // Añadimos Clone aquí
 pub enum ApplicationError {
     #[error("Recurso no encontrado: {0}")]
     NotFound(String),

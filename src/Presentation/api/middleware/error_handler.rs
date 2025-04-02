@@ -9,7 +9,7 @@ use std::future::Future;
 use std::pin::Pin;
 use log::error;
 use crate::presentation::api::middleware::map_error_thread_safe;
-//use crate::presentation::api::middleware::CustomError;
+
 
 // Estructura para el middleware
 pub struct ErrorHandlerMiddleware;
