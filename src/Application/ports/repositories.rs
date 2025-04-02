@@ -19,9 +19,10 @@ pub trait UserRepositoryPort: Send + Sync {
 
 /// Puerto para transacciones (separado para object safety)
 pub trait TransactionalUserRepository: UserRepositoryPort {
-    fn transaction<F, R>(&self, f: F) -> Pin<Box<dyn Future<Output = Result<R>> + Send + '_>>
+    // Versión simplificada que evita problemas con lifetimes
+    async fn execute_transaction<F, R>(&self, operation: F) -> Result<R>
     where
-        F: FnOnce(Box<dyn UserRepositoryPort>) -> Pin<Box<dyn Future<Output = Result<R>> + Send + '_>> + Send + 'static,
+        F: FnOnce() -> Pin<Box<dyn Future<Output = Result<R>> + Send>> + Send + 'static,
         R: Send + 'static;
 }
 
