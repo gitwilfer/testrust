@@ -139,8 +139,13 @@ impl DatabaseManager {
     }
     
     // Obtener un pool de conexiones por nombre
-    pub fn get_pool(&self, name: &str) -> Option<&DbPool> {
-        self.pools.get(name)
+    //pub fn get_pool(&self, name: &str) -> Option<&DbPool> {
+        //self.pools.get(name)
+    //}
+
+    pub fn get_pool(db_name: &str) -> Option<DbPool> {
+        let manager = DB_MANAGER.lock().unwrap();
+        manager.get_pool(db_name).cloned()
     }
     
     // Obtener una conexión de un pool específico
