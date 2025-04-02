@@ -1,11 +1,11 @@
 use actix_web::{HttpResponse, error::ResponseError, http::StatusCode};
 use anyhow::Error as AnyhowError;
-use diesel::result::Error as DieselError;
+//use diesel::result::Error as DieselError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use log::error as log_error;
 use crate::application::errors::application_error::ApplicationError;
 use crate::presentation::api::adapters::ErrorAdapter;
-use crate::presentation::api::validators::ValidationErrors;
+//use crate::presentation::api::validators::ValidationErrors;
 
 // Un tipo de error simple que implementa Send y Sync
 #[derive(Debug)]
