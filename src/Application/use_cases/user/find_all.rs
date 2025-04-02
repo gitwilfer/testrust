@@ -21,11 +21,11 @@ impl FindAllUsersUseCase {
     }
 
     pub async fn execute(&self) -> Result<Vec<UserResponseDto>, ApplicationError> {
-        // 1. Obtener todos los usuarios del repositorio dentro de una transacción
+        // 1. Obtener todos los usuarios del repositorio
         let users = self.user_repository.find_all().await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al obtener usuarios: {}", e)))?;
     
-        // 2. Mapear cada usuario a un DTO
+        // 2. Mapear cada usuario a un DTO usando el mapper
         let user_dtos = users
             .into_iter()
             .map(|user| self.user_mapper.to_dto(user))

@@ -5,8 +5,6 @@ use actix_web::{
     Error, HttpResponse, http::StatusCode, error::ResponseError
 };
 use futures::future::{ok, LocalBoxFuture, Ready};
-use std::future::Future;
-use std::pin::Pin;
 use log::error;
 use crate::presentation::api::middleware::map_error_thread_safe;
 

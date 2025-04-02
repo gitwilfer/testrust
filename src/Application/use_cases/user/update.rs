@@ -53,7 +53,7 @@ impl UpdateUserUseCase {
             }
         }
         
-        // 4. Aplicar actualizaciones básicas
+        // 4. Aplicar actualizaciones básicas usando el mapper
         self.user_mapper.apply_updates(&mut user, &update_dto);
         
         // 5. Actualizar contraseña si se proporcionó
@@ -73,7 +73,7 @@ impl UpdateUserUseCase {
             .await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al actualizar el usuario: {}", e)))?;
         
-        // 8. Mapear a DTO de respuesta
+        // 8. Mapear a DTO de respuesta usando el mapper
         Ok(self.user_mapper.to_dto(updated_user))
     }
 }

@@ -1,6 +1,10 @@
 use crate::domain::entities::user::User;
 use crate::application::dtos::user_dto::UserResponseDto;
+use crate::application::dtos::create_user_dto::CreateUserDto;
 use crate::application::dtos::update_user_dto::UpdateUserDto;
+use anyhow::{Result, anyhow};
+use uuid::Uuid;
+use chrono::Utc;
 
 pub struct UserMapper {}
 
@@ -9,6 +13,7 @@ impl UserMapper {
         UserMapper {}
     }
 
+    // Mapeo de Entity a DTO (domain -> application)
     pub fn to_dto(&self, entity: User) -> UserResponseDto {
         UserResponseDto {
             id: entity.id,
@@ -20,8 +25,25 @@ impl UserMapper {
             created_at: entity.created_at,
             modified_by: entity.modified_by,
             modified_at: entity.modified_at,
-            status: entity.status as i32, // Convertir i16 a i32
+            status: entity.status as i32,
         }
+    }
+
+    // Mapeo de CreateUserDto a Entity (application -> domain)
+    pub fn to_entity(&self, dto: CreateUserDto, hashed_password: String) -> Result<User> {
+        Ok(User {
+            id: Uuid::new_v4(),
+            username: dto.username,
+            first_name: dto.first_name,
+            last_name: dto.last_name,
+            email: dto.email,
+            password: hashed_password,
+            created_by: None,
+            created_at: Utc::now().naive_utc(),
+            modified_by: None,
+            modified_at: None,
+            status: 1, // Active por defecto
+        })
     }
 
     // Método para aplicar actualizaciones de un DTO a una entidad

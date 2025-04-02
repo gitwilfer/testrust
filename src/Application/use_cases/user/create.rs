@@ -4,15 +4,8 @@ use crate::application::errors::application_error::ApplicationError;
 use crate::application::mappers::user_mapper::UserMapper;
 use crate::application::ports::repositories::{UserRepositoryPort, AuthServicePort};
 use crate::application::validators::user_validator::UserValidator;
-use crate::domain::entities::user::User;
-use chrono::Utc;
-use uuid::Uuid;
 use std::sync::Arc;
 
-/// Caso de uso para crear un usuario
-/// 
-/// Este caso de uso implementa la lógica de negocio para crear un nuevo usuario,
-/// validando los datos, verificando unicidad y persistiendo la entidad.
 pub struct CreateUserUseCase {
     user_repository: Arc<dyn UserRepositoryPort>,
     auth_service: Arc<dyn AuthServicePort>,
@@ -62,20 +55,9 @@ impl CreateUserUseCase {
             .hash_password(&user_dto.password)
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al hashear la contraseña: {}", e)))?;
 
-        // 4. Crear entidad User
-        let new_user = User {
-            id: Uuid::new_v4(),
-            username: user_dto.username,
-            first_name: user_dto.first_name,
-            last_name: user_dto.last_name,
-            email: user_dto.email,
-            password: hashed_password,
-            created_by: None,
-            created_at: Utc::now().naive_utc(),
-            modified_by: None,
-            modified_at: None,
-            status: 1,
-        };
+        // 4. Convertir DTO a entidad using the mapper
+        let new_user = self.user_mapper.to_entity(user_dto, hashed_password)
+            .map_err(|e| ApplicationError::ValidationError(format!("Error al crear entidad de usuario: {}", e)))?;
 
         // 5. Guardar en repositorio dentro de una transacción
         let created_user = self.user_repository.create(new_user).await

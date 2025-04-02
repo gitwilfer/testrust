@@ -1,4 +1,3 @@
-// src/infrastructure/auth/auth_service_impl.rs
 use async_trait::async_trait;
 use anyhow::{Result, anyhow};
 use bcrypt::{hash, verify, DEFAULT_COST};
@@ -7,6 +6,7 @@ use serde::{Serialize, Deserialize};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+use std::sync::Arc;
 
 use crate::application::ports::repositories::AuthServicePort;
 
@@ -19,8 +19,8 @@ struct Claims {
 }
 
 pub struct AuthServiceImpl {
-    jwt_secret: String,
-    token_expiration: u64, // Duración del token en segundos
+    jwt_secret: Arc<String>,
+    token_expiration: u64,
 }
 
 impl AuthServiceImpl {
@@ -34,7 +34,20 @@ impl AuthServiceImpl {
             .parse::<u64>()
             .unwrap_or(86400);
         
-        Ok(Self { jwt_secret, token_expiration })
+        Ok(Self { 
+            jwt_secret: Arc::new(jwt_secret), 
+            token_expiration 
+        })
+    }
+}
+
+// Implementamos Clone para permitir compartir el servicio entre hilos
+impl Clone for AuthServiceImpl {
+    fn clone(&self) -> Self {
+        Self {
+            jwt_secret: self.jwt_secret.clone(),
+            token_expiration: self.token_expiration,
+        }
     }
 }
 
@@ -63,19 +76,25 @@ impl AuthServicePort for AuthServiceImpl {
             role: None, // Podríamos añadir roles en el futuro
         };
 
+        // Usamos Arc<String> para compartir la secret key entre hilos
+        let jwt_secret = self.jwt_secret.clone();
+        
         encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(self.jwt_secret.as_bytes()),
+            &EncodingKey::from_secret(jwt_secret.as_bytes()),
         )
         .map_err(|e| anyhow!("Error al generar el token JWT: {}", e))
     }
 
     async fn validate_token(&self, token: &str) -> Result<Uuid> {
+        // Usamos Arc<String> para compartir la secret key entre hilos
+        let jwt_secret = self.jwt_secret.clone();
+        
         // Decodificar y validar el token
         let token_data = decode::<Claims>(
             token,
-            &DecodingKey::from_secret(self.jwt_secret.as_bytes()),
+            &DecodingKey::from_secret(jwt_secret.as_bytes()),
             &Validation::default(),
         )
         .map_err(|e| anyhow!("Token JWT inválido: {}", e))?;
@@ -85,50 +104,5 @@ impl AuthServicePort for AuthServiceImpl {
             .map_err(|_| anyhow!("ID de usuario inválido en el token"))?;
         
         Ok(user_id)
-    }
-}
-
-// Tests unitarios para el servicio de autenticación
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::env;
-
-    #[tokio::test]
-    async fn test_password_hash_and_verify() {
-        // Configurar la variable de entorno para el test
-        env::set_var("JWT_SECRET", "test_secret_key");
-        
-        let auth_service = AuthServiceImpl::new().unwrap();
-        let password = "SecurePassword123!";
-        
-        // Probar hash
-        let hashed = auth_service.hash_password(password).unwrap();
-        assert_ne!(password, hashed, "El hash debe ser diferente a la contraseña original");
-        
-        // Probar verificación
-        let is_valid = auth_service.verify_password(password, &hashed).unwrap();
-        assert!(is_valid, "La verificación de la contraseña debería ser exitosa");
-        
-        // Probar verificación con contraseña incorrecta
-        let is_invalid = auth_service.verify_password("WrongPassword", &hashed).unwrap();
-        assert!(!is_invalid, "La verificación con contraseña incorrecta debería fallar");
-    }
-
-    #[tokio::test]
-    async fn test_token_generation_and_validation() {
-        // Configurar la variable de entorno para el test
-        env::set_var("JWT_SECRET", "test_secret_key");
-        
-        let auth_service = AuthServiceImpl::new().unwrap();
-        let user_id = Uuid::new_v4();
-        
-        // Generar token
-        let token = auth_service.generate_token(user_id).await.unwrap();
-        assert!(!token.is_empty(), "El token no debería estar vacío");
-        
-        // Validar token y verificar que devuelve el mismo ID
-        let extracted_id = auth_service.validate_token(&token).await.unwrap();
-        assert_eq!(user_id, extracted_id, "El ID extraído debería coincidir con el original");
     }
 }

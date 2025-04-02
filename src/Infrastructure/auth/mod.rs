@@ -1,3 +1,3 @@
-//pub mod auth_service_impl;
+pub mod auth_service_impl;
 
-//pub use auth_service_impl::AuthServiceImpl;
+pub use auth_service_impl::AuthServiceImpl;

@@ -2,7 +2,6 @@ use actix_web::{error::Error, http::StatusCode, HttpResponse, ResponseError, web
 use serde::Serialize;
 use std::fmt;
 use validator::Validate;
-use std::borrow::Cow;
 
 // Mantenemos las estructuras existentes
 #[derive(Debug, Serialize, Clone)]

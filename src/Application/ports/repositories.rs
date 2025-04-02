@@ -1,10 +1,10 @@
 // src/Application/ports/repositories.rs
-use async_trait::async_trait;
-use uuid::Uuid;
-use anyhow::Result;
 use std::future::Future;
 use std::pin::Pin;
+use anyhow::Result;
+use uuid::Uuid;
 use crate::domain::entities::user::User;
+
 
 /// Puerto para el repositorio de usuarios - operaciones básicas
 #[async_trait]
@@ -18,17 +18,16 @@ pub trait UserRepositoryPort: Send + Sync {
     async fn find_all(&self) -> Result<Vec<User>>;
 }
 
-/// Puerto para transacciones
+// Nuevo trait para operaciones transaccionales
 #[async_trait]
 pub trait TransactionalUserRepository: UserRepositoryPort {
-    /// Ejecuta una función dentro de una transacción
     async fn transaction<F, Fut, R>(&self, f: F) -> Result<R>
     where
         F: FnOnce(&dyn UserRepositoryPort) -> Fut + Send + 'static,
         Fut: Future<Output = Result<R>> + Send + 'static,
         R: Send + 'static;
         
-    /// Métodos específicos para transacciones comunes
+    // Métodos de conveniencia para operaciones comunes en transacción
     async fn create_in_transaction(&self, user: User) -> Result<User>;
     async fn update_in_transaction(&self, user: User) -> Result<User>;
 }

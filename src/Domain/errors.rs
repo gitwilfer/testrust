@@ -1,6 +1,6 @@
 // src/domain/errors.rs
 use thiserror::Error;
-use std::fmt;
+
 
 /// Errores específicos del dominio
 /// 

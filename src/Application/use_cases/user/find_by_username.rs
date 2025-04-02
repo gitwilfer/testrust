@@ -26,13 +26,13 @@ impl FindUserByUsernameUseCase {
             return Err(ApplicationError::ValidationError("El username no puede estar vacío".to_string()));
         }
     
-        // 2. Buscar usuario por username dentro de una transacción
+        // 2. Buscar usuario por username
         let username_clone = username.to_string(); // Clonar para mover dentro del closure
         let user = self.user_repository.find_by_username(&username_clone).await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
             .ok_or_else(|| ApplicationError::NotFound(format!("Usuario con username '{}' no encontrado", username)))?;
     
-        // 3. Mapear a DTO y devolver
+        // 3. Mapear a DTO usando el mapper y devolver
         Ok(self.user_mapper.to_dto(user))
     }
 }

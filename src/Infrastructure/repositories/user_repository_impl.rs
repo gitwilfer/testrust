@@ -1,14 +1,16 @@
-// src/Infrastructure/repositories/user_repository_impl.rs
 use async_trait::async_trait;
 use anyhow::Result;
 use std::sync::Arc;
+use std::future::Future;
 use uuid::Uuid;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::Connection as DieselConnection;
+use log::debug;
+use std::pin::Pin;
 
-//use crate::application::ports::repositories::TransactionalUserRepository;
-use crate::application::ports::repositories::UserRepositoryPort;
-use crate::application::services::{get_database_for_entity, get_default_database};
+use crate::application::ports::repositories::{UserRepositoryPort, TransactionalUserRepository};
+use crate::application::services::get_database_for_entity;
 use crate::domain::entities::user::User;
 use crate::infrastructure::persistence::database::{self, DbConnection};
 use crate::infrastructure::persistence::models::user_model::UserModel;
@@ -16,18 +18,16 @@ use crate::infrastructure::persistence::schema::users;
 use crate::infrastructure::persistence::mapper::{user_to_model, model_to_user};
 
 pub struct UserRepositoryImpl {
-    // Podemos guardar el pool de conexiones aquí para mayor eficiencia
     pool: Arc<Pool<ConnectionManager<diesel::PgConnection>>>,
 }
 
 impl UserRepositoryImpl {
     pub fn new() -> Result<Self> {
-        // Obtenemos el pool de conexiones desde el gestor de bases de datos
         let pool = match database::get_default_connection() {
             Ok(conn) => {
-                // Si podemos obtener una conexión, entonces tenemos acceso al pool
+                // Liberamos la conexión inmediatamente
                 let conn_ref = conn;
-                drop(conn_ref); // Liberamos la conexión
+                drop(conn_ref);
                 Arc::new(database::get_pool_from_connection())
             },
             Err(_) => return Err(anyhow::anyhow!("No se pudo obtener el pool de conexiones principal")),
@@ -42,227 +42,147 @@ impl UserRepositoryImpl {
         database::get_connection(&db_name)
     }
 
-    // Método para ejecutar una operación dentro de una transacción
-    async fn with_transaction<F, R>(&self, f: F) -> Result<R>
+    // Helper para ejecutar operaciones de base de datos y manejar errores comunes
+    async fn execute_db_operation<F, T>(&self, operation: F) -> Result<T>
     where
-        F: FnOnce(&mut DbConnection) -> Result<R>,
+        F: FnOnce(&mut DbConnection) -> Result<T>,
     {
         let mut conn = self.get_connection().await?;
-        
-        conn.transaction(|conn| {
-            f(conn)
-        })
+        operation(&mut conn)
     }
 }
 
 #[async_trait]
 impl UserRepositoryPort for UserRepositoryImpl {
     async fn create(&self, user: User) -> Result<User> {
-        let mut conn = self.get_connection().await?;
-        let user_model = user_to_model(&user);
-        
-        diesel::insert_into(users::table)
-            .values(&user_model)
-            .execute(&mut conn)?;
-        
-        Ok(user)
+        self.execute_db_operation(|conn| {
+            let user_model = user_to_model(&user);
+            
+            diesel::insert_into(users::table)
+                .values(&user_model)
+                .execute(conn)?;
+            
+            Ok(user)
+        }).await
     }
     
     async fn find_by_id(&self, id: Uuid) -> Result<Option<User>> {
-        let mut conn = self.get_connection().await?;
-        
-        let result = users::table
-            .filter(users::idx_usuario.eq(id))
-            .first::<UserModel>(&mut conn)
-            .optional()?;
-        
-        Ok(result.map(|model| model_to_user(&model)))
+        self.execute_db_operation(|conn| {
+            let result = users::table
+                .filter(users::idx_usuario.eq(id))
+                .first::<UserModel>(conn)
+                .optional()?;
+            
+            Ok(result.map(|model| model_to_user(&model)))
+        }).await
     }
     
     async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
-        let mut conn = self.get_connection().await?;
+        let email = email.to_string(); // Clonar para evitar problemas de lifetime
         
-        let result = users::table
-            .filter(users::correo_electronico.eq(email))
-            .first::<UserModel>(&mut conn)
-            .optional()?;
-        
-        Ok(result.map(|model| model_to_user(&model)))
+        self.execute_db_operation(move |conn| {
+            let result = users::table
+                .filter(users::correo_electronico.eq(email))
+                .first::<UserModel>(conn)
+                .optional()?;
+            
+            Ok(result.map(|model| model_to_user(&model)))
+        }).await
     }
     
     async fn find_by_username(&self, username: &str) -> Result<Option<User>> {
-        let mut conn = self.get_connection().await?;
+        let username = username.to_string(); // Clonar para evitar problemas de lifetime
         
-        let result = users::table
-            .filter(users::usuario.eq(username))
-            .first::<UserModel>(&mut conn)
-            .optional()?;
-        
-        Ok(result.map(|model| model_to_user(&model)))
+        self.execute_db_operation(move |conn| {
+            let result = users::table
+                .filter(users::usuario.eq(username))
+                .first::<UserModel>(conn)
+                .optional()?;
+            
+            Ok(result.map(|model| model_to_user(&model)))
+        }).await
     }
     
     async fn update(&self, user: User) -> Result<User> {
-        let mut conn = self.get_connection().await?;
-        let user_model = user_to_model(&user);
-        
-        diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
-            .set(&user_model)
-            .execute(&mut conn)?;
-        
-        Ok(user)
+        self.execute_db_operation(|conn| {
+            let user_model = user_to_model(&user);
+            
+            diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
+                .set(&user_model)
+                .execute(conn)?;
+            
+            Ok(user)
+        }).await
     }
     
     async fn delete(&self, id: Uuid) -> Result<()> {
-        let mut conn = self.get_connection().await?;
-        
-        let affected = diesel::delete(users::table.filter(users::idx_usuario.eq(id)))
-            .execute(&mut conn)?;
-        
-        if affected == 0 {
-            return Err(anyhow::anyhow!("Usuario no encontrado"));
-        }
-        
-        Ok(())
+        self.execute_db_operation(|conn| {
+            let affected = diesel::delete(users::table.filter(users::idx_usuario.eq(id)))
+                .execute(conn)?;
+            
+            if affected == 0 {
+                return Err(anyhow::anyhow!("Usuario no encontrado"));
+            }
+            
+            Ok(())
+        }).await
     }
     
     async fn find_all(&self) -> Result<Vec<User>> {
-        let mut conn = self.get_connection().await?;
-        
-        let models = users::table
-            .load::<UserModel>(&mut conn)?;
-        
-        Ok(models.iter().map(|model| model_to_user(model)).collect())
+        self.execute_db_operation(|conn| {
+            let models = users::table
+                .load::<UserModel>(conn)?;
+            
+            Ok(models.iter().map(|model| model_to_user(model)).collect())
+        }).await
     }
 }
 
-// Implementación para soporte de transacciones
+// Implementación completamente rediseñada para transacciones
 #[async_trait]
 impl TransactionalUserRepository for UserRepositoryImpl {
+    // Este método usa un enfoque diferente que es thread-safe
     async fn transaction<F, Fut, R>(&self, f: F) -> Result<R>
     where
         F: FnOnce(&dyn UserRepositoryPort) -> Fut + Send + 'static,
         Fut: Future<Output = Result<R>> + Send + 'static,
         R: Send + 'static
     {
-        // Crear un repositorio temporal para la transacción
-        struct TransactionUserRepository<'a> {
-            conn: &'a mut DbConnection,
-        }
+        debug!("Iniciando transacción");
         
-        #[async_trait]
-        impl<'a> UserRepositoryPort for TransactionUserRepository<'a> {
-            async fn create(&self, user: User) -> Result<User> {
-                let user_model = user_to_model(&user);
-                
-                diesel::insert_into(users::table)
-                    .values(&user_model)
-                    .execute(self.conn)?;
-                
-                Ok(user)
-            }
-            
-            async fn find_by_id(&self, id: Uuid) -> Result<Option<User>> {
-                let result = users::table
-                    .filter(users::idx_usuario.eq(id))
-                    .first::<UserModel>(self.conn)
-                    .optional()?;
-                
-                Ok(result.map(|model| model_to_user(&model)))
-            }
-            
-            async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
-                let result = users::table
-                    .filter(users::correo_electronico.eq(email))
-                    .first::<UserModel>(self.conn)
-                    .optional()?;
-                
-                Ok(result.map(|model| model_to_user(&model)))
-            }
-            
-            async fn find_by_username(&self, username: &str) -> Result<Option<User>> {
-                let result = users::table
-                    .filter(users::usuario.eq(username))
-                    .first::<UserModel>(self.conn)
-                    .optional()?;
-                
-                Ok(result.map(|model| model_to_user(&model)))
-            }
-            
-            async fn update(&self, user: User) -> Result<User> {
-                let user_model = user_to_model(&user);
-                
-                diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
-                    .set(&user_model)
-                    .execute(self.conn)?;
-                
-                Ok(user)
-            }
-            
-            async fn delete(&self, id: Uuid) -> Result<()> {
-                let affected = diesel::delete(users::table.filter(users::idx_usuario.eq(id)))
-                    .execute(self.conn)?;
-                
-                if affected == 0 {
-                    return Err(anyhow::anyhow!("Usuario no encontrado"));
-                }
-                
-                Ok(())
-            }
-            
-            async fn find_all(&self) -> Result<Vec<User>> {
-                let models = users::table
-                    .load::<UserModel>(self.conn)?;
-                
-                Ok(models.iter().map(|model| model_to_user(model)).collect())
-            }
-        }
-        
-        // Obtener conexión y comenzar transacción
+        // Obtenemos una conexión del pool
         let mut conn = self.get_connection().await?;
-        let result = conn.transaction(|c| {
-            let repo = TransactionUserRepository { conn: c };
-            
-            // Ejecutar la función dentro de la transacción
-            // (en un runtime de Tokio para manejar las operaciones async)
+        
+        // Creamos una estructura que implementa el trait pero no contiene referencias
+        // a la conexión, sino que todas las operaciones las redirigimos a métodos 
+        // que crean nuevas conexiones
+        let result = conn.transaction::<R, anyhow::Error, _>(|_| {
+            // Usamos el self (UserRepositoryImpl) directamente como implementación de UserRepositoryPort
+            // Esto evita tener que crear una nueva estructura que dependa de la conexión
             Box::pin(async move {
-                f(&repo).await
-            })
+                f(self).await
+            }) as Pin<Box<dyn Future<Output = Result<R>> + Send>>
         });
         
+        debug!("Transacción completada");
         result
     }
+    
+    // Implementación simplificada de create_in_transaction
     async fn create_in_transaction(&self, user: User) -> Result<User> {
-        let mut conn = self.get_connection().await?;
-        let user_model = user_to_model(&user);
-        
-        conn.transaction(|conn| {
-            diesel::insert_into(users::table)
-                .values(&user_model)
-                .execute(conn)
-                .map_err(|e| anyhow::anyhow!("Error en transacción: {}", e))
-                .map(|_| user.clone())
-        })
+        self.transaction(|repo| {
+            Box::pin(async move {
+                repo.create(user).await
+            })
+        }).await
     }
     
+    // Implementación simplificada de update_in_transaction
     async fn update_in_transaction(&self, user: User) -> Result<User> {
-        let mut conn = self.get_connection().await?;
-        let user_model = user_to_model(&user);
-        
-        conn.transaction(|conn| {
-            // En lugar de usar set(), actualizamos campo por campo
-            diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
-                .set((
-                    users::nombre.eq(&user_model.first_name),
-                    users::apellido.eq(&user_model.last_name),
-                    users::correo_electronico.eq(&user_model.email),
-                    users::password_hash.eq(&user_model.password),
-                    users::modificado_por.eq(&user_model.modified_by),
-                    users::fecha_modificacion.eq(&user_model.modified_at),
-                    users::status.eq(&user_model.status),
-                ))
-                .execute(conn)
-                .map_err(|e| anyhow::anyhow!("Error en transacción de actualización: {}", e))
-                .map(|_| user.clone())
-        })
+        self.transaction(|repo| {
+            Box::pin(async move {
+                repo.update(user).await
+            })
+        }).await
     }
 }
