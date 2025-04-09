@@ -158,24 +158,20 @@ impl TransactionalUserRepository for UserRepositoryImpl {
         Fut: Future<Output = Result<R>> + Send + 'static,
         R: Send + 'static
     {
-        debug!("Iniciando transacción");
-        
-        // Obtenemos una conexión del pool
         let mut conn = self.get_connection().await?;
         
-        // Creamos una estructura que implementa el trait pero no contiene referencias
-        // a la conexión, sino que todas las operaciones las redirigimos a métodos 
-        // que crean nuevas conexiones
-        let result = conn.transaction::<R, anyhow::Error, _>(|_| {
-            // Usamos el self (UserRepositoryImpl) directamente como implementación de UserRepositoryPort
-            // Esto evita tener que crear una nueva estructura que dependa de la conexión
-            Box::pin(async move {
-                f(self).await
-            }) as Pin<Box<dyn Future<Output = Result<R>> + Send>>
-        });
-        
-        debug!("Transacción completada");
-        result
+        // Este es el problema principal - necesitamos manejar correctamente
+        // la transición de la función de callback síncrona a la asíncrona
+        conn.transaction(|c| {
+            // Crear un repositorio temporal que implementa UserRepositoryPort
+            let repo = TransactionUserRepository { conn: c };
+            
+            // Obtener el runtime actual y ejecutar el future de manera síncrona
+            let runtime = tokio::runtime::Handle::current();
+            runtime.block_on(async {
+                f(&repo).await
+            })
+        })
     }
     
     // Implementación simplificada de create_in_transaction

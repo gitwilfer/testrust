@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use crate::infrastructure::persistence::schema::usuarios;
 
 // Quitar AsChangeset ya que está causando problemas con UUID
-#[derive(Debug, Queryable, Insertable)]
+#[derive(Debug, Queryable, Insertable, AsChangeset)]
 #[diesel(table_name = usuarios)]
 pub struct UserModel {
     #[diesel(column_name = idx_usuario)]
