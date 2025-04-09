@@ -118,7 +118,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
             let user_model = user_to_model(&user);
             
             diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
-                .set(&user_model)
+                .set(user_model)
                 .execute(conn)?;
             
             Ok(user)
@@ -180,11 +180,27 @@ impl TransactionalUserRepository for UserRepositoryImpl {
     
     // Implementación simplificada de create_in_transaction
     async fn create_in_transaction(&self, user: User) -> Result<User> {
-        self.execute_create_user(user).await
+        let mut conn = self.get_connection().await?;
+        conn.transaction(|conn| {
+            let user_model = user_to_model(&user);
+            diesel::insert_into(users::table)
+                .values(user_model)
+                .execute(conn)
+                .map_err(|e| anyhow::anyhow!("Error en transacción: {}", e))?;
+            Ok(user)
+        })
     }
     
     // Implementación simplificada de update_in_transaction
     async fn update_in_transaction(&self, user: User) -> Result<User> {
-        self.execute_create_user(user).await
+        let mut conn = self.get_connection().await?;
+        conn.transaction(|conn| {
+            let user_model = user_to_model(&user);
+            diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
+                .set(user_model)
+                .execute(conn)
+                .map_err(|e| anyhow::anyhow!("Error en transacción de actualización: {}", e))?;
+            Ok(user)
+        })
     }
 }
