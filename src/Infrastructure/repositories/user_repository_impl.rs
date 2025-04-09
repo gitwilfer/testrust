@@ -193,7 +193,7 @@ impl TransactionalUserRepository for UserRepositoryImpl {
         conn.transaction(|conn| {
             let user_model = user_to_model(&user);
             diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
-                .set(user_model)
+                .set(&user_model)
                 .execute(conn)
                 .map_err(|e| anyhow::anyhow!("Error en transacción de actualización: {}", e))?;
             Ok(user)
