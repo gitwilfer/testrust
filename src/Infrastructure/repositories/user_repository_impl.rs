@@ -69,7 +69,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
             let user_model = user_to_model(&user);
             
             diesel::insert_into(users::table)
-                .values(&user_model)
+                .values(user_model)
                 .execute(conn)?;
             
             Ok(user)
