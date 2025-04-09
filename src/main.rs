@@ -1,13 +1,10 @@
-mod application;
-mod domain;
-mod infrastructure;
-mod presentation;
-
+// src/main.rs - Solución al error de ownership
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use log::{info, LevelFilter};
 use env_logger::Builder;
 use std::io::Write;
+use std::sync::Arc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -55,6 +52,9 @@ async fn main() -> std::io::Result<()> {
     // Inicializar mapeado de entidades a bases de datos
     application::services::initialize_database_mappings();
 
+    // Clonar config para usar fuera de la closure después
+    let server_config = config.clone();
+
     info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
     
     HttpServer::new(move || {
@@ -71,7 +71,7 @@ async fn main() -> std::io::Result<()> {
         
         app
     })
-    .bind((config.http_host.clone(), config.http_port))?
+    .bind((server_config.http_host.clone(), server_config.http_port))?
     .run()
     .await
 }
