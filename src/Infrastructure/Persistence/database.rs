@@ -139,8 +139,8 @@ impl DatabaseManager {
     }
     
     // Obtener un pool de conexiones por nombre
-    pub fn get_pool(&self, name: &str) -> Option<&DbPool> {
-        self.pools.get(name)
+    pub fn get_pool(&self, db_name: &str) -> Option<&DbPool> {
+        self.pools.get(db_name)
     }
 
     
@@ -149,12 +149,12 @@ impl DatabaseManager {
         match self.get_pool(name) {
             Some(pool) => {
                 debug!("Obteniendo conexión de pool: {}", name);
-                let conn = pool.get()?;
-                Ok(conn)
+                pool.get()
             },
             None => {
                 error!("Pool de conexiones no encontrado: {}", name);
-                Err(PoolError::GetTimeout) // Usar un error existente de r2d2
+                // En lugar de crear un error personalizado, usamos el error estándar de r2d2
+                Err(PoolError::Timeout)
             }
         }
     }
@@ -165,7 +165,8 @@ impl DatabaseManager {
             Some(name) => self.get_connection(name),
             None => {
                 error!("No hay base de datos predeterminada configurada");
-                Err(PoolError::ConnectionError(r2d2::Error::ConnectionError("No default database".into())))
+                // Usar el error estándar de r2d2
+                Err(PoolError::Timeout)
             }
         }
     }
