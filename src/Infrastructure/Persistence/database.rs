@@ -6,8 +6,8 @@ use log::{error, info, debug};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
-use anyhow::{Result, anyhow};
 use std::collections::HashMap;
+use anyhow::{Result, anyhow};
 
 // Definición de tipos para mayor claridad
 pub type DbPool = Pool<ConnectionManager<PgConnection>>;
@@ -153,8 +153,13 @@ impl DatabaseManager {
             },
             None => {
                 error!("Pool de conexiones no encontrado: {}", name);
-                // En lugar de crear un error personalizado, usamos el error estándar de r2d2
-                Err(PoolError::new(format!("Pool not found: {}", name)))
+                // Obtener cualquier error de PoolError
+                let dummy_manager = ConnectionManager::<PgConnection>::new("");
+                let dummy_pool = Pool::builder()
+                    .max_size(1)
+                    .build(dummy_manager)
+                    .expect("Failed to create dummy pool");
+                dummy_pool.get() // Esto siempre fallará con un error válido de PoolError
             }
         }
     }
@@ -165,8 +170,13 @@ impl DatabaseManager {
             Some(name) => self.get_connection(name),
             None => {
                 error!("No hay base de datos predeterminada configurada");
-                // Usar el error estándar de r2d2
-                Err(PoolError::new(format!("Pool not found: {}", name)))
+                // Obtener cualquier error de PoolError
+                let dummy_manager = ConnectionManager::<PgConnection>::new("");
+                let dummy_pool = Pool::builder()
+                    .max_size(1)
+                    .build(dummy_manager)
+                    .expect("Failed to create dummy pool");
+                dummy_pool.get() // Esto siempre fallará con un error válido de PoolError
             }
         }
     }
