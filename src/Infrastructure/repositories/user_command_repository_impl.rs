@@ -6,6 +6,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 
 use crate::application::ports::repositories::UserCommandRepository;
+use crate::application::services::get_database_for_entity;
 use crate::domain::entities::user::User;
 use crate::infrastructure::persistence::database::{self, DbConnection};
 use crate::infrastructure::persistence::models::user_model::UserModel;
@@ -39,7 +40,8 @@ impl UserCommandRepositoryImpl {
     }
     
     async fn get_connection(&self) -> Result<DbConnection> {
-        database::get_connection(&crate::application::services::get_database_for_entity("user"))
+        let db_name = get_database_for_entity("user");
+        Ok(database::get_connection(&db_name)?)
     }
 }
 

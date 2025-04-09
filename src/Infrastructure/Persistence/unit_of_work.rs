@@ -6,28 +6,27 @@ use anyhow::Result;
 use async_trait::async_trait;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
+use diesel::Connection;
 
 use crate::application::ports::unit_of_work::{UnitOfWork, RepositoryRegistry};
 use crate::application::ports::repositories::UserRepositoryPort;
 use crate::infrastructure::repositories::user_repository_impl::UserRepositoryImpl;
 
-pub struct DatabaseRepositoryRegistry<'a> {
-    conn: &'a mut diesel::PgConnection,
+pub struct DatabaseRepositoryRegistry {
     user_repository: UserRepositoryImpl,
 }
 
-impl<'a> DatabaseRepositoryRegistry<'a> {
-    pub fn new(conn: &'a mut PgConnection) -> Self {
+impl DatabaseRepositoryRegistry {
+    pub fn new(pool: Arc<Pool<ConnectionManager<PgConnection>>>) -> Self {
         Self {
-            conn,
-            user_repository: UserRepositoryImpl::with_connection(conn),
+            user_repository: Arc::new(UserRepositoryImpl::new(pool).unwrap()),
         }
     }
 }
 
-impl<'a> RepositoryRegistry for DatabaseRepositoryRegistry<'a> {
+impl RepositoryRegistry for DatabaseRepositoryRegistry {
     fn user_repository(&self) -> &dyn UserRepositoryPort {
-        &self.user_repository
+        &*self.user_repository
     }
 }
 
@@ -51,7 +50,7 @@ impl UnitOfWork for DatabaseUnitOfWork {
     {
         let mut conn = self.pool.get()?;
         
-        conn.transaction(|conn| {
+        conn.transaction::<_, anyhow::Error, _>(|conn| {
             let registry = DatabaseRepositoryRegistry::new(conn);
             let future = work(&registry);
             
