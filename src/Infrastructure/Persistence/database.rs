@@ -154,7 +154,7 @@ impl DatabaseManager {
             None => {
                 error!("Pool de conexiones no encontrado: {}", name);
                 // En lugar de crear un error personalizado, usamos el error estándar de r2d2
-                Err(PoolError::Timeout)
+                Err(PoolError::new(format!("Pool not found: {}", name)))
             }
         }
     }
@@ -166,7 +166,7 @@ impl DatabaseManager {
             None => {
                 error!("No hay base de datos predeterminada configurada");
                 // Usar el error estándar de r2d2
-                Err(PoolError::Timeout)
+                Err(PoolError::new(format!("Pool not found: {}", name)))
             }
         }
     }
