@@ -38,7 +38,7 @@ where
     debug!("Iniciando transacción asíncrona");
     
     // Ejecutar la transacción
-    let result = conn.transaction(|| {
+    let result = conn.transaction(|conn|{
         // Tokio runtime para ejecutar la función asíncrona en el contexto de la transacción
         let runtime = tokio::runtime::Handle::current();
         runtime.block_on(async {
