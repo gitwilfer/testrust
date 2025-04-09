@@ -4,6 +4,8 @@ use std::pin::Pin;
 use anyhow::Result;
 use uuid::Uuid;
 use crate::domain::entities::user::User;
+use async_trait::async_trait;
+
 
 
 /// Puerto para el repositorio de usuarios - operaciones básicas
@@ -39,4 +41,27 @@ pub trait AuthServicePort: Send + Sync {
     fn verify_password(&self, password: &str, hash: &str) -> Result<bool>;
     async fn generate_token(&self, user_id: Uuid) -> Result<String>;
     async fn validate_token(&self, token: &str) -> Result<Uuid>;
+}
+
+
+
+
+// Query (consultas) - Operaciones de solo lectura
+#[async_trait]
+pub trait UserQueryRepository: Send + Sync {
+    // Configurar la base de datos para consultas
+    fn set_database(&mut self, database_name: &str);
+    
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>>;
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>>;
+    async fn find_by_username(&self, username: &str) -> Result<Option<User>>;
+    async fn find_all(&self) -> Result<Vec<User>>;
+}
+
+// Command (comandos) - Operaciones de escritura
+#[async_trait]
+pub trait UserCommandRepository: Send + Sync {
+    async fn create(&self, user: User) -> Result<User>;
+    async fn update(&self, user: User) -> Result<User>;
+    async fn delete(&self, id: Uuid) -> Result<()>;
 }
