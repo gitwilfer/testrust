@@ -136,7 +136,13 @@ impl TransactionalOperations for UserRepositoryImpl {
         
         // Ejecutamos la transacción en un contexto bloqueante
         task::block_in_place(move || {
-            conn.transaction(f)
+            // Aquí está el cambio: adaptamos la función f para que tome &mut PooledConnection
+            conn.transaction(|pooled_conn| {
+                // Obtenemos la referencia a PgConnection dentro de PooledConnection
+                let pg_conn: &mut PgConnection = pooled_conn;
+                // Y ahora pasamos esa referencia a nuestra función original
+                f(pg_conn)
+            })
         })
     }
 }
