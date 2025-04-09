@@ -8,6 +8,9 @@ use std::sync::Arc;
 
 // Importación explícita del módulo de rutas
 use crate::presentation::api::routes;
+use crate::infrastructure::config::app_config;
+use crate::infrastructure::persistence::database;
+use crate::application::services;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
