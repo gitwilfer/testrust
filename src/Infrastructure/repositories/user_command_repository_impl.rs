@@ -52,7 +52,7 @@ impl UserCommandRepository for UserCommandRepositoryImpl {
         let user_model = user_to_model(&user);
         
         diesel::insert_into(users::table)
-            .values(&user_model)
+            .values(user_model)
             .execute(&mut conn)?;
         
         Ok(user)
@@ -63,7 +63,7 @@ impl UserCommandRepository for UserCommandRepositoryImpl {
         let user_model = user_to_model(&user);
         
         diesel::update(users::table.filter(users::idx_usuario.eq(user.id)))
-            .set(&user_model)
+            .set(user_model)
             .execute(&mut conn)?;
         
         Ok(user)
