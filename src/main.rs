@@ -1,10 +1,13 @@
-// src/main.rs - Solución al error de ownership
+// src/main.rs
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use log::{info, LevelFilter};
 use env_logger::Builder;
 use std::io::Write;
 use std::sync::Arc;
+
+// Importación explícita del módulo de rutas
+use crate::presentation::api::routes;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -52,7 +55,7 @@ async fn main() -> std::io::Result<()> {
     // Inicializar mapeado de entidades a bases de datos
     application::services::initialize_database_mappings();
 
-    // Clonar config para usar fuera de la closure después
+    // Clonar config para usar después de la closure
     let server_config = config.clone();
 
     info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
@@ -60,8 +63,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let mut app = App::new();
         
-        // Configurar rutas API
-        app = app.configure(presentation::api::routes::config);
+        // Configurar rutas API usando la importación correcta
+        app = app.configure(routes::config);
         
         // Añadir Swagger si está activado
         if config.enable_swagger {
