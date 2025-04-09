@@ -1,16 +1,14 @@
-// src/main.rs
+mod application;
+mod domain;
+mod infrastructure;
+mod presentation;
+
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use log::{info, LevelFilter};
 use env_logger::Builder;
 use std::io::Write;
-use std::sync::Arc;
-
-// Importación explícita del módulo de rutas
-use crate::presentation::api::routes;
-use crate::infrastructure::config::app_config;
-use crate::infrastructure::persistence::database;
-use crate::application::services;
+use std::sync::Arc;  // Añadido para Arc
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -58,7 +56,7 @@ async fn main() -> std::io::Result<()> {
     // Inicializar mapeado de entidades a bases de datos
     application::services::initialize_database_mappings();
 
-    // Clonar config para usar después de la closure
+    // Clonar el config para usarlo después del move
     let server_config = config.clone();
 
     info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
@@ -66,8 +64,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let mut app = App::new();
         
-        // Configurar rutas API usando la importación correcta
-        app = app.configure(routes::config);
+        // Configurar rutas API
+        app = app.configure(presentation::api::routes::config);
         
         // Añadir Swagger si está activado
         if config.enable_swagger {
