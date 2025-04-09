@@ -30,7 +30,7 @@ impl UserMapper {
     }
 
     // Mapeo de CreateUserDto a Entity (application -> domain)
-    pub fn to_entity(&self, dto: CreateUserDto, hashed_password: String) -> Result<User> {
+    pub fn to_entity(&self, dto: CreateUserDto, hashed_password: String) -> Result<User, anyhow::Error> {
         Ok(User {
             id: Uuid::new_v4(),
             username: dto.username,

@@ -11,6 +11,7 @@ use crate::application::ports::repositories::{UserCommandRepository, UserQueryRe
 use crate::application::ports::repositories::AuthServicePort;
 use crate::application::ports::unit_of_work::{UnitOfWork, RepositoryRegistry};
 use crate::application::validators::user_validator::UserValidator;
+use crate::domain::entities::user_preference::UserPreference;
 
 // Caso de uso que crea un usuario y sus preferencias en una sola transacción
 pub struct CreateUserWithPreferencesUseCase {
