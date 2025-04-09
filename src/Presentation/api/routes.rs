@@ -6,7 +6,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(web::scope("/api")
         .wrap(RequestLoggerMiddleware)
         .wrap(ErrorHandlerMiddleware)
-        .configure(auth_controller::config)
+        //.configure(auth_controller::config)
         .configure(user_controller::config)
     );
 }
