@@ -66,5 +66,4 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("/auth")
             .service(login)
     );
-    routes
 }

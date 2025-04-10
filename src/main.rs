@@ -1,14 +1,16 @@
- mod application;
- mod domain;
- mod infrastructure;
- mod presentation;
+ // No declarar módulos aquí, ya están en src/lib.rs
+ mod container; // Añadir declaración del módulo container
 
-use actix_web::{App, HttpServer};
-use dotenv::dotenv;
-use log::{info, LevelFilter};
-use env_logger::Builder;
-use std::io::Write;
-use std::sync::Arc;  // Añadido para Arc
+ use actix_web::{web, App, HttpServer}; // Añadido web
+ use dotenv::dotenv;
+ use log::{info, LevelFilter};
+ use env_logger::Builder;
+ use std::io::Write;
+ use std::sync::Arc;
+ use crate::container::AppState; // Importar AppState desde el crate
+ use crate::infrastructure; // Importar para acceder a sub-módulos como config y persistence
+ use crate::application; // Importar para acceder a sub-módulos como services
+ use crate::presentation; // Importar para acceder a sub-módulos como api
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -62,20 +64,29 @@ async fn main() -> std::io::Result<()> {
     info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
     
     HttpServer::new(move || {
-        let mut app = App::new();
-        
-        // Configurar rutas API
-        info!("routes ....");
-        app = app.configure(presentation::api::routes::config);
-        
-        // Añadir Swagger si está activado
-        if config.enable_swagger {
-            info!("Swagger UI habilitado en /swagger-ui");
-            // Aquí iría la configuración de Swagger
-        }
-        
-        app
-    })
+            // Clonamos el AppState para cada worker del servidor HTTP.
+            // AppState deriva Clone, por lo que esto es eficiente (clona Arcs/web::Data).
+            // Nota: La creación de app_state se movió fuera de la clausura.
+            let app_state_clone = app_state.clone();
+    
+            App::new()
+                // Registrar los datos compartidos desde AppState
+                .app_data(app_state_clone.auth_controller_data.clone())
+                // Aquí registrarías otros datos de app_state_clone si los hubiera
+                // .app_data(app_state_clone.user_controller_data.clone())
+    
+                // Configurar rutas API (usando el módulo presentation importado)
+                .configure(presentation::api::routes::config)
+    
+                // Añadir Swagger si está activado
+                // (Considera mover esta lógica también a una función de configuración si crece)
+                // .configure(|cfg| {
+                //     if server_config.enable_swagger { // Necesitamos clonar server_config o config para usarla aquí
+                //         info!("Swagger UI enabled at /swagger-ui");
+                //         // Configuración de Swagger aquí...
+                //     }
+                // })
+        })
     .bind((server_config.http_host.clone(), server_config.http_port))?
     .run()
     .await
