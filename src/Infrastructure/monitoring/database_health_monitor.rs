@@ -6,6 +6,7 @@ use tokio::sync::RwLock;
 use tokio::time::interval;
 use anyhow::Result;
 use log::{info, warn, error};
+use std::collections::HashMap;
 
 use crate::Infrastructure::Persistence::database;
 use crate::Infrastructure::Persistence::sqlx_database;
@@ -35,9 +36,11 @@ impl DatabaseHealthMonitor {
     
     // Iniciar monitoreo en segundo plano
     pub fn start_monitoring(&self) {
+        // Creamos clones de los Arc para mover a la tarea asíncrona
         let health_data = self.health_data.clone();
         let check_interval = self.check_interval;
-        let last_check = self.last_check.clone();
+        // No podemos clonar RwLock, pero podemos crear uno nuevo con el mismo valor inicial
+        let last_check = Arc::new(RwLock::new(None));
         
         tokio::spawn(async move {
             let mut interval = interval(check_interval);
@@ -47,20 +50,19 @@ impl DatabaseHealthMonitor {
                 
                 // Verificar salud de Diesel
                 let start = Instant::now();
-                let diesel_health = match database::check_database_health() {
-                    Ok(health) => health,
-                    Err(e) => {
-                        error!("Error al verificar salud de bases de datos Diesel: {}", e);
-                        continue;
-                    }
-                };
+                let diesel_health_result = database::check_database_health();
+                
+                // Convertimos el resultado a un HashMap<String, bool> compatible
+                let diesel_health: HashMap<String, bool> = diesel_health_result.iter()
+                    .map(|(name, healthy)| (name.clone(), *healthy))
+                    .collect();
                 
                 // Verificar salud de SQLx
-                let sqlx_health = match sqlx_database::check_database_health().await {
+                let sqlx_health_result = match sqlx_database::check_database_health().await {
                     Ok(health) => health,
                     Err(e) => {
                         error!("Error al verificar salud de bases de datos SQLx: {}", e);
-                        continue;
+                        HashMap::new() // Mapa vacío en caso de error
                     }
                 };
                 
@@ -84,7 +86,7 @@ impl DatabaseHealthMonitor {
                 }
                 
                 // Procesar resultados SQLx
-                for (name, healthy) in sqlx_health {
+                for (name, healthy) in sqlx_health_result {
                     let response_time = start.elapsed().as_millis() as u64;
                     health_entries.push(DatabaseHealth {
                         name: format!("sqlx_{}", name),
