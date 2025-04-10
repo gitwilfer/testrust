@@ -56,7 +56,7 @@ impl DatabaseSelector {
 // Singleton para acceso global al selector de bases de datos
 lazy_static! {
     static ref DB_SELECTOR: Arc<Mutex<DatabaseSelector>> = {
-        let default_db = crate::infrastructure::persistence::database::get_default_database_name()
+        let default_db = crate::Infrastructure::Persistence::database::get_default_database_name()
             .unwrap_or_else(|| "main".to_string());
         Arc::new(Mutex::new(
             DatabaseSelector::new(&default_db)
