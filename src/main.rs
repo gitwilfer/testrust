@@ -1,7 +1,7 @@
-mod application;
-mod domain;
-mod infrastructure;
-mod presentation;
+ mod application;
+ mod domain;
+ mod infrastructure;
+ mod presentation;
 
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
@@ -65,6 +65,7 @@ async fn main() -> std::io::Result<()> {
         let mut app = App::new();
         
         // Configurar rutas API
+        info!("routes ....");
         app = app.configure(presentation::api::routes::config);
         
         // Añadir Swagger si está activado

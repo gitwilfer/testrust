@@ -1,5 +1,5 @@
-//! Este middleware registra todas las peticiones entrantes y las respuestas salientes.
-//! Registra el método, la ruta, las cabeceras, la información de conexión, el código de estado y el tiempo transcurrido.
+// Este middleware registra todas las peticiones entrantes y las respuestas salientes.
+// Registra el método, la ruta, las cabeceras, la información de conexión, el código de estado y el tiempo transcurrido.
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error,
