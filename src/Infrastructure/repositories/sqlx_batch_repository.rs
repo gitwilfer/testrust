@@ -1,0 +1,154 @@
+// src/Infrastructure/repositories/sqlx_batch_repository.rs
+
+use async_trait::async_trait;
+use anyhow::{Result, anyhow};
+use futures::{stream, StreamExt};
+use sqlx::{Pool, Postgres};
+use std::sync::Arc;
+use uuid::Uuid;
+
+use crate::Domain::entities::user::User;
+use crate::Infrastructure::repositories::sqlx_repository_base::SqlxRepositoryBase;
+
+// Repositorio para operaciones en lote
+pub struct BatchRepository {
+    base: SqlxRepositoryBase,
+    batch_size: usize,
+}
+
+impl BatchRepository {
+    pub async fn new(entity_name: &str, batch_size: usize) -> Result<Self> {
+        Ok(Self {
+            base: SqlxRepositoryBase::new(entity_name).await?,
+            batch_size,
+        })
+    }
+    
+    pub fn with_pool(pool: Arc<Pool<Postgres>>, entity_name: &str, batch_size: usize) -> Self {
+        Self {
+            base: SqlxRepositoryBase::with_pool(pool, entity_name),
+            batch_size,
+        }
+    }
+    
+    // Insertar usuarios en lote
+    pub async fn bulk_insert_users(&self, users: Vec<User>) -> Result<Vec<User>> {
+        if users.is_empty() {
+            return Ok(vec![]);
+        }
+        
+        let chunks = users.chunks(self.batch_size);
+        let mut results = Vec::with_capacity(users.len());
+        
+        for chunk in chunks {
+            let inserted = self.insert_user_batch(chunk.to_vec()).await?;
+            results.extend(inserted);
+        }
+        
+        Ok(results)
+    }
+    
+    // Insertar un lote de usuarios
+    async fn insert_user_batch(&self, users: Vec<User>) -> Result<Vec<User>> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO usuarios (idx_usuario, usuario, nombre, apellido, correo_electronico, password_hash, status, creado_por, fecha_creacion, modificado_por, fecha_modificacion) "
+        );
+        
+        query_builder.push_values(users.iter(), |mut b, user| {
+            b.push_bind(user.id)
+             .push_bind(&user.username)
+             .push_bind(&user.first_name)
+             .push_bind(&user.last_name)
+             .push_bind(&user.email)
+             .push_bind(&user.password)
+             .push_bind(user.status)
+             .push_bind(user.created_by)
+             .push_bind(user.created_at)
+             .push_bind(user.modified_by)
+             .push_bind(user.modified_at);
+        });
+        
+        query_builder.push(" RETURNING idx_usuario");
+        
+        let query = query_builder.build();
+        let inserted_ids: Vec<(Uuid,)> = query.fetch_all(self.base.pool()).await?;
+        
+        // Mapear los IDs insertados de vuelta a los usuarios originales
+        let id_map: std::collections::HashMap<Uuid, User> = users.into_iter()
+            .map(|user| (user.id, user))
+            .collect();
+            
+        let results = inserted_ids.into_iter()
+            .filter_map(|(id,)| id_map.get(&id).cloned())
+            .collect();
+            
+        Ok(results)
+    }
+    
+    // Actualizar usuarios en lote con procesamiento paralelo
+    pub async fn bulk_update_users(&self, users: Vec<User>, concurrency: usize) -> Result<Vec<User>> {
+        if users.is_empty() {
+            return Ok(vec![]);
+        }
+        
+        // Actualizar en paralelo con límite de concurrencia
+        let results = stream::iter(users)
+            .map(|user| {
+                let pool = self.base.pool().clone();
+                async move {
+                    let result = sqlx::query!(
+                        r#"
+                        UPDATE usuarios
+                        SET 
+                            usuario = $1,
+                            nombre = $2, 
+                            apellido = $3, 
+                            correo_electronico = $4,
+                            password_hash = $5,
+                            status = $6,
+                            modificado_por = $7,
+                            fecha_modificacion = $8
+                        WHERE idx_usuario = $9
+                        RETURNING idx_usuario
+                        "#,
+                        user.username,
+                        user.first_name,
+                        user.last_name,
+                        user.email,
+                        user.password,
+                        user.status,
+                        user.modified_by,
+                        user.modified_at,
+                        user.id
+                    )
+                    .execute(&pool)
+                    .await;
+                    
+                    match result {
+                        Ok(_) => Ok(user),
+                        Err(e) => Err(anyhow!("Error actualizando usuario {}: {}", user.id, e)),
+                    }
+                }
+            })
+            .buffer_unordered(concurrency)
+            .collect::<Vec<Result<User>>>()
+            .await;
+            
+        // Procesar resultados
+        let mut successful = Vec::new();
+        let mut errors = Vec::new();
+        
+        for result in results {
+            match result {
+                Ok(user) => successful.push(user),
+                Err(e) => errors.push(e),
+            }
+        }
+        
+        if !errors.is_empty() {
+            return Err(anyhow!("Errores en la actualización masiva: {:?}", errors));
+        }
+        
+        Ok(successful)
+    }
+}

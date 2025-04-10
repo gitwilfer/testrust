@@ -7,6 +7,10 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait RepositoryRegistry: Send + Sync {
     fn user_repository(&self) -> &dyn crate::Application::ports::repositories::UserRepositoryPort;
+    
+    // Nuevo método para el repositorio de consulta
+    fn user_query_repository(&self) -> &dyn crate::Application::ports::repositories::UserQueryRepository;
+    
     // Añadir otros repositorios según sea necesario
 }
 

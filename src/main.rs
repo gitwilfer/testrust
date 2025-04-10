@@ -46,14 +46,22 @@ async fn main() -> std::io::Result<()> {
     info!("Configuración cargada: {:?}", config);
 
     // Inicializar conexiones a bases de datos usando la configuración
-    match anyb::Infrastructure::Persistence::database::initialize_with_config(&config) { // Corregir capitalización (Infrastructure y Persistence)
-        Ok(_) => info!("Conexiones a bases de datos inicializadas correctamente"),
+    match anyb::Infrastructure::Persistence::database::initialize_with_config(&config) {
+        Ok(_) => info!("Conexiones a bases de datos Diesel inicializadas correctamente"),
         Err(e) => {
-            log::error!("Error al inicializar conexiones a bases de datos: {}", e);
+            log::error!("Error al inicializar conexiones a bases de datos Diesel: {}", e);
             return Err(std::io::Error::new(std::io::ErrorKind::Other, "Error de inicialización de BD"));
         }
     }
 
+    // Inicializar conexiones SQLx
+    match anyb::Infrastructure::Persistence::sqlx_database::initialize_with_config(&config).await {
+        Ok(_) => info!("Conexiones a bases de datos SQLx inicializadas correctamente"),
+        Err(e) => {
+            log::error!("Error al inicializar conexiones a bases de datos SQLx: {}", e);
+            log::warn!("Continuando con Diesel para operaciones de base de datos");
+        }
+    }
     // Inicializar mapeado de entidades a bases de datos
     anyb::Application::services::initialize_database_mappings(); // Corregir capitalización
 
@@ -66,8 +74,20 @@ async fn main() -> std::io::Result<()> {
     // La construcción de dependencias ahora está encapsulada en AppState::build()
     // Simplificamos el manejo de errores con expect() para asegurar que app_state se inicialice.
     // En producción, manejar el error de forma más robusta (log, retornar error).
-    let app_state = AppState::build()
-        .expect("Error fatal al construir el estado de la aplicación");
+    //let app_state = AppState::build()
+        //.expect("Error fatal al construir el estado de la aplicación");
+
+    let app_state = match anyb::container::AppState::build_with_sqlx().await {
+        Ok(state) => {
+            info!("Aplicación inicializada con SQLx para consultas");
+            state
+        },
+        Err(e) => {
+            log::warn!("No se pudo inicializar con SQLx: {}. Usando implementación Diesel", e);
+            anyb::container::AppState::build()
+                .expect("Error fatal al construir el estado de la aplicación")
+        }
+    };
 
     // Clonamos el estado ANTES de moverlo a la clausura.
     let app_state_for_server = app_state.clone();
@@ -79,8 +99,9 @@ async fn main() -> std::io::Result<()> {
             App::new()
                 // Registrar los datos compartidos desde AppState
                 .app_data(app_state_clone.auth_controller_data.clone())
+                .app_data(app_state_clone.user_controller_data.clone())
+                .app_data(app_state_for_server.health_controller_data.clone())
                 // Aquí registrarías otros datos de app_state_clone si los hubiera
-                // .app_data(app_state_clone.user_controller_data.clone())
 
                 // Configurar rutas API (usando la ruta completa)
                 .configure(anyb::Presentation::api::routes::config) // Corregir capitalización
@@ -92,7 +113,6 @@ async fn main() -> std::io::Result<()> {
                     //     let config_clone = server_config.clone();
                     //     if config_clone.enable_swagger {
                     //         info!("Swagger UI enabled at /swagger-ui");
-                    //         // Configuración de Swagger aquí...
                     //     }
                     // })
             })
