@@ -1,5 +1,4 @@
-// src/Infrastructure/monitoring/database_health_monitor.rs (versión corregida)
-
+use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::interval;
@@ -9,10 +8,11 @@ use std::collections::HashMap;
 use crate::Infrastructure::Persistence::database;
 use crate::Infrastructure::Persistence::sqlx_database;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseHealth {
     pub name: String,
     pub healthy: bool,
+    //#[serde(with = "chrono::serde::ts_rfc3339")]
     pub last_check: chrono::DateTime<chrono::Utc>,
     pub response_time_ms: u64,
 }
