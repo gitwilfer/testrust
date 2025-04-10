@@ -1,5 +1,5 @@
 // src/bin/test_connections.rs
-use anyb::infrastructure::persistence::database;
+use anyb::Infrastructure::Persistence::database;
 
 fn main() {
     println!("Testing database connection...");
