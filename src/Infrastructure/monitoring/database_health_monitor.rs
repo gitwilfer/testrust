@@ -2,9 +2,8 @@
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
+use tokio::sync::Mutex; // Cambiamos a Mutex para simplificar
 use tokio::time::interval;
-use anyhow::Result;
 use log::{info, warn, error};
 use std::collections::HashMap;
 
@@ -19,33 +18,40 @@ pub struct DatabaseHealth {
     pub response_time_ms: u64,
 }
 
+// Datos que serán compartidos entre hilos
+struct SharedState {
+    health_data: Vec<DatabaseHealth>,
+    last_check: Option<Instant>,
+}
+
 pub struct DatabaseHealthMonitor {
-    health_data: Arc<RwLock<Vec<DatabaseHealth>>>,
+    shared: Arc<Mutex<SharedState>>,
     check_interval: Duration,
-    last_check: Arc<RwLock<Option<Instant>>>,  // Cambiado a Arc<RwLock>
 }
 
 impl DatabaseHealthMonitor {
     pub fn new(check_interval_seconds: u64) -> Self {
         Self {
-            health_data: Arc::new(RwLock::new(Vec::new())),
+            shared: Arc::new(Mutex::new(SharedState {
+                health_data: Vec::new(),
+                last_check: None,
+            })),
             check_interval: Duration::from_secs(check_interval_seconds),
-            last_check: Arc::new(RwLock::new(None)),  // Inicializado como Arc<RwLock>
         }
     }
     
     // Iniciar monitoreo en segundo plano
     pub fn start_monitoring(&self) {
-        // Creamos clones de los Arc para mover a la tarea asíncrona
-        let health_data = self.health_data.clone();
+        // Clonar el Arc que contiene el estado compartido
+        let shared = self.shared.clone();
         let check_interval = self.check_interval;
-        let last_check = self.last_check.clone();  // Ahora podemos clonar el Arc
         
+        // Spawn una tarea en el runtime de tokio
         tokio::spawn(async move {
-            let mut interval = interval(check_interval);
+            let mut interval_timer = interval(check_interval);
             
             loop {
-                interval.tick().await;
+                interval_timer.tick().await;
                 
                 // Verificar salud de Diesel
                 let start = Instant::now();
@@ -56,11 +62,11 @@ impl DatabaseHealthMonitor {
                     Ok(health) => health,
                     Err(e) => {
                         error!("Error al verificar salud de bases de datos SQLx: {}", e);
-                        HashMap::new() // Mapa vacío en caso de error
+                        HashMap::new()
                     }
                 };
                 
-                // Actualizar datos de salud
+                // Preparar nuevos datos de salud
                 let mut health_entries = Vec::new();
                 let now = chrono::Utc::now();
                 
@@ -94,15 +100,11 @@ impl DatabaseHealthMonitor {
                     }
                 }
                 
-                // Actualizar datos compartidos - todo dentro de un bloque async
+                // Actualizar estado compartido atómicamente
                 {
-                    let mut data = health_data.write().await;
-                    *data = health_entries;
-                }
-                
-                {
-                    let mut last = last_check.write().await;
-                    *last = Some(start);
+                    let mut state = shared.lock().await;
+                    state.health_data = health_entries;
+                    state.last_check = Some(start);
                 }
                 
                 info!("Verificación de salud de bases de datos completada");
@@ -112,18 +114,19 @@ impl DatabaseHealthMonitor {
     
     // Obtener datos de salud actuales
     pub async fn get_health_data(&self) -> Vec<DatabaseHealth> {
-        self.health_data.read().await.clone()
+        let state = self.shared.lock().await;
+        state.health_data.clone()
     }
     
     // Verificar si todas las bases de datos están saludables
     pub async fn all_healthy(&self) -> bool {
-        let data = self.health_data.read().await;
-        data.iter().all(|h| h.healthy)
+        let state = self.shared.lock().await;
+        state.health_data.iter().all(|h| h.healthy)
     }
     
     // Obtener tiempo desde la última verificación
     pub async fn time_since_last_check(&self) -> Option<Duration> {
-        let last_check = self.last_check.read().await;
-        last_check.map(|t| t.elapsed())
+        let state = self.shared.lock().await;
+        state.last_check.map(|t| t.elapsed())
     }
 }
