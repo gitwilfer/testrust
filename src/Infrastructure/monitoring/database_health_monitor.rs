@@ -22,7 +22,7 @@ pub struct DatabaseHealth {
 pub struct DatabaseHealthMonitor {
     health_data: Arc<RwLock<Vec<DatabaseHealth>>>,
     check_interval: Duration,
-    last_check: RwLock<Option<Instant>>,
+    last_check: Arc<RwLock<Option<Instant>>>,  // Cambiado a Arc<RwLock>
 }
 
 impl DatabaseHealthMonitor {
@@ -30,7 +30,7 @@ impl DatabaseHealthMonitor {
         Self {
             health_data: Arc::new(RwLock::new(Vec::new())),
             check_interval: Duration::from_secs(check_interval_seconds),
-            last_check: RwLock::new(None),
+            last_check: Arc::new(RwLock::new(None)),  // Inicializado como Arc<RwLock>
         }
     }
     
@@ -39,8 +39,7 @@ impl DatabaseHealthMonitor {
         // Creamos clones de los Arc para mover a la tarea asíncrona
         let health_data = self.health_data.clone();
         let check_interval = self.check_interval;
-        // No podemos clonar RwLock, pero podemos crear uno nuevo con el mismo valor inicial
-        let last_check = Arc::new(RwLock::new(None));
+        let last_check = self.last_check.clone();  // Ahora podemos clonar el Arc
         
         tokio::spawn(async move {
             let mut interval = interval(check_interval);
@@ -50,12 +49,7 @@ impl DatabaseHealthMonitor {
                 
                 // Verificar salud de Diesel
                 let start = Instant::now();
-                let diesel_health_result = database::check_database_health();
-                
-                // Convertimos el resultado a un HashMap<String, bool> compatible
-                let diesel_health: HashMap<String, bool> = diesel_health_result.iter()
-                    .map(|(name, healthy)| (name.clone(), *healthy))
-                    .collect();
+                let diesel_health = database::check_database_health();
                 
                 // Verificar salud de SQLx
                 let sqlx_health_result = match sqlx_database::check_database_health().await {
@@ -100,10 +94,16 @@ impl DatabaseHealthMonitor {
                     }
                 }
                 
-                // Actualizar datos compartidos
-                let mut data = health_data.write().await;
-                *data = health_entries;
-                *last_check.write().await = Some(start);
+                // Actualizar datos compartidos - todo dentro de un bloque async
+                {
+                    let mut data = health_data.write().await;
+                    *data = health_entries;
+                }
+                
+                {
+                    let mut last = last_check.write().await;
+                    *last = Some(start);
+                }
                 
                 info!("Verificación de salud de bases de datos completada");
             }
