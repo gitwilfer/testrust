@@ -57,12 +57,7 @@ impl LoginUseCase {
 
 // Trait para el caso de uso de login
 #[async_trait]
-pub trait LoginUseCaseTrait: Send + Sync {
-    async fn execute(&self, login_dto: LoginDto) -> Result<TokenDto, ApplicationError>;
-}
-
-#[async_trait]
-impl LoginUseCaseTrait for LoginUseCase {
+impl crate::Application::use_cases::traits::LoginUseCase for LoginUseCase {
     async fn execute(&self, login_dto: LoginDto) -> Result<TokenDto, ApplicationError> {
         self.execute(login_dto).await
     }
