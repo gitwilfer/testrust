@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::presentation::api::responses::api_error::ApiError;
+use crate::Presentation::api::responses::api_error::ApiError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ApiResponse<T> {

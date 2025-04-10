@@ -11,7 +11,7 @@ use log::debug;
 
 use crate::Application::errors::application_error::ApplicationError;
 use crate::Application::ports::repositories::AuthServicePort;
-use crate::presentation::api::adapters::ErrorAdapter;
+use crate::Presentation::api::adapters::ErrorAdapter;
 
 // Middleware para autenticación JWT
 pub struct AuthMiddleware {

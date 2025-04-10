@@ -13,11 +13,11 @@ use crate::Application::dtos::create_user_dto::CreateUserDto;
 use crate::Application::dtos::update_user_dto::UpdateUserDto;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::presentation::api::middleware::map_error;
-use crate::presentation::api::validators::validate_json;
-use crate::presentation::api::responses::ApiResponse;
-use crate::presentation::api::models::request::{CreateUserRequest, UpdateUserRequest};
-use crate::presentation::api::models::response::UserResponse;
+use crate::Presentation::api::middleware::map_error;
+use crate::Presentation::api::validators::validate_json;
+use crate::Presentation::api::responses::ApiResponse;
+use crate::Presentation::api::models::request::{CreateUserRequest, UpdateUserRequest};
+use crate::Presentation::api::models::response::UserResponse;
 
 // Controlador para crear usuarios
 pub struct UserController {

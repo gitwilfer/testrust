@@ -1,7 +1,7 @@
 use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
 use crate::Application::errors::application_error::ApplicationError;
-use crate::presentation::api::responses::{ApiResponse, ApiError};
+use crate::Presentation::api::responses::{ApiResponse, ApiError};
 
 /// Adaptador para convertir errores de aplicación a respuestas HTTP
 /// 

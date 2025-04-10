@@ -6,7 +6,7 @@ use actix_web::{
 };
 use futures::future::{ok, LocalBoxFuture, Ready};
 use log::error;
-use crate::presentation::api::middleware::map_error_thread_safe;
+use crate::Presentation::api::middleware::map_error_thread_safe;
 
 
 // Estructura para el middleware

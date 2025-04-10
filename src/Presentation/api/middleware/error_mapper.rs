@@ -4,8 +4,8 @@ use anyhow::Error as AnyhowError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use log::error as log_error;
 use crate::Application::errors::application_error::ApplicationError;
-use crate::presentation::api::adapters::ErrorAdapter;
-//use crate::presentation::api::validators::ValidationErrors;
+use crate::Presentation::api::adapters::ErrorAdapter;
+//use crate::Presentation::api::validators::ValidationErrors;
 
 // Un tipo de error simple que implementa Send y Sync
 #[derive(Debug)]
