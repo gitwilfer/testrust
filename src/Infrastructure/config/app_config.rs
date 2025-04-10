@@ -4,8 +4,8 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 use log::info;
 
-use crate::infrastructure::config::Environment;
-use crate::infrastructure::persistence::database::DatabaseConfig;
+use crate::Infrastructure::config::Environment;
+use crate::Infrastructure::Persistence::database::DatabaseConfig;
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {

@@ -3,7 +3,7 @@ use anyhow::Error as AnyhowError;
 //use diesel::result::Error as DieselError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use log::error as log_error;
-use crate::application::errors::application_error::ApplicationError;
+use crate::Application::errors::application_error::ApplicationError;
 use crate::presentation::api::adapters::ErrorAdapter;
 //use crate::presentation::api::validators::ValidationErrors;
 

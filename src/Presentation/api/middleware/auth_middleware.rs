@@ -9,8 +9,8 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use log::debug;
 
-use crate::application::errors::application_error::ApplicationError;
-use crate::application::ports::repositories::AuthServicePort;
+use crate::Application::errors::application_error::ApplicationError;
+use crate::Application::ports::repositories::AuthServicePort;
 use crate::presentation::api::adapters::ErrorAdapter;
 
 // Middleware para autenticación JWT

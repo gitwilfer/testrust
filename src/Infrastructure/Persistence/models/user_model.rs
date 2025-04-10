@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 use diesel::prelude::*;
-use crate::infrastructure::persistence::schema::usuarios;
+use crate::Infrastructure::Persistence::schema::usuarios;
 
 // Quitar AsChangeset ya que está causando problemas con UUID
 #[derive(Debug, Queryable, Insertable, AsChangeset)]

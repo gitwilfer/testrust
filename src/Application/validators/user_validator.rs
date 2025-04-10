@@ -2,8 +2,8 @@ use regex::Regex;
 use lazy_static::lazy_static;
 use anyhow::{Result, anyhow};
 use validator::Validate;
-use crate::application::dtos::create_user_dto::CreateUserDto;
-use crate::application::dtos::update_user_dto::UpdateUserDto;
+use crate::Application::dtos::create_user_dto::CreateUserDto;
+use crate::Application::dtos::update_user_dto::UpdateUserDto;
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex = Regex::new(

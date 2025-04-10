@@ -5,13 +5,13 @@ use std::sync::Arc;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 
-use crate::application::ports::repositories::UserQueryRepository;
-use crate::application::services::get_database_for_entity;
-use crate::domain::entities::user::User;
-use crate::infrastructure::persistence::database::{self, DbConnection};
-use crate::infrastructure::persistence::models::user_model::UserModel;
-use crate::infrastructure::persistence::schema::users;
-use crate::infrastructure::persistence::mapper::model_to_user;
+use crate::Application::ports::repositories::UserQueryRepository;
+use crate::Application::services::get_database_for_entity;
+use crate::Domain::entities::user::User;
+use crate::Infrastructure::Persistence::database::{self, DbConnection};
+use crate::Infrastructure::Persistence::models::user_model::UserModel;
+use crate::Infrastructure::Persistence::schema::users;
+use crate::Infrastructure::Persistence::mapper::model_to_user;
 
 pub struct UserQueryRepositoryImpl {
     pool: Arc<Pool<ConnectionManager<diesel::PgConnection>>>,

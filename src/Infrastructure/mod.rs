@@ -1,7 +1,7 @@
 pub mod repositories;
-pub mod persistence;
+pub mod Persistence; // Corregir capitalización
 pub mod auth;
-pub mod services;
+pub mod Services;    // Corregir capitalización
 pub mod config;
 
 pub mod factory;

@@ -4,10 +4,10 @@ use anyhow::{Result, Context}; // Usamos anyhow para un manejo de errores más s
 
 // Importaciones de implementaciones concretas y controladores
 // Usamos 'crate::' para referirnos a los módulos definidos en src/lib.rs
-use crate::infrastructure::repositories::user_repository_impl::UserRepositoryImpl;
-use crate::infrastructure::auth::auth_service_impl::AuthServiceImpl;
-use crate::application::use_cases::user::login::LoginUseCase;
-use crate::presentation::api::controllers::auth_controller::AuthController;
+use crate::Infrastructure::repositories::user_repository_impl::UserRepositoryImpl; // Corregir capitalización
+use crate::Infrastructure::auth::auth_service_impl::AuthServiceImpl;             // Corregir capitalización
+use crate::Application::use_cases::user::login::LoginUseCase;                   // Corregir capitalización
+use crate::Presentation::api::controllers::auth_controller::AuthController;       // Corregir capitalización
 
 // Estructura que contiene los datos compartidos de la aplicación.
 // Se puede clonar porque todos sus miembros son `web::Data` (que internamente usa Arc).

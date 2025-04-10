@@ -1,8 +1,8 @@
 use actix_web::{web, HttpResponse, post, Error};
 use std::sync::Arc;
 
-use crate::application::dtos::auth_dto::LoginDto;
-use crate::application::use_cases::traits::LoginUseCase;
+use crate::Application::dtos::auth_dto::LoginDto;
+use crate::Application::use_cases::traits::LoginUseCase;
 use crate::presentation::api::middleware::map_error;
 use crate::presentation::api::validators::validate_json;
 use crate::presentation::api::responses::ApiResponse;

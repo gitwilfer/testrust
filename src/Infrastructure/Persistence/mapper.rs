@@ -1,5 +1,5 @@
-use crate::domain::entities::user::User;
-use crate::infrastructure::persistence::models::user_model::UserModel;
+use crate::Domain::entities::user::User;
+use crate::Infrastructure::Persistence::models::user_model::UserModel;
 
 pub fn user_to_model(user: &User) -> UserModel {
     UserModel {

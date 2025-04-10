@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 use anyhow::Result as AnyhowResult; // <-- Añadido y alias usado
 
-use crate::domain::entities::Entity;
+use crate::Domain::entities::Entity;
 
 #[async_trait]
 pub trait EntityRepository: Send + Sync {

@@ -8,13 +8,13 @@ use tokio::task;
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::application::ports::repositories::UserRepositoryPort;
-use crate::application::services::{get_database_for_entity, get_default_database};
-use crate::domain::entities::user::User;
-use crate::infrastructure::persistence::database::{self, DbConnection};
-use crate::infrastructure::persistence::models::user_model::UserModel;
-use crate::infrastructure::persistence::schema::users;
-use crate::infrastructure::persistence::mapper::{user_to_model, model_to_user};
+use crate::Application::ports::repositories::UserRepositoryPort;
+use crate::Application::services::{get_database_for_entity, get_default_database};
+use crate::Domain::entities::user::User;
+use crate::Infrastructure::Persistence::database::{self, DbConnection};
+use crate::Infrastructure::Persistence::models::user_model::UserModel;
+use crate::Infrastructure::Persistence::schema::users;
+use crate::Infrastructure::Persistence::mapper::{user_to_model, model_to_user};
 
 // Definimos un trait para transacciones que no tiene la restricción Sync
 // Esto es clave para nuestra solución

@@ -4,10 +4,10 @@ use diesel::Connection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::PgConnection;
 
-use crate::application::ports::repositories::UserRepositoryPort;
-use crate::application::ports::unit_of_work::RepositoryRegistry;
-use crate::domain::entities::user::User;
-use crate::infrastructure::repositories::UserRepositoryImpl;
+use crate::Application::ports::repositories::UserRepositoryPort;
+use crate::Application::ports::unit_of_work::RepositoryRegistry;
+use crate::Domain::entities::user::User;
+use crate::Infrastructure::repositories::UserRepositoryImpl;
 
 // Estructura que proporciona acceso a los repositorios dentro de una transacción
 pub struct DatabaseRepositoryRegistry {

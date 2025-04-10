@@ -1,4 +1,4 @@
-use crate::infrastructure::config::AppConfig;
+use crate::Infrastructure::config::AppConfig;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection, PoolError};
 use diesel::PgConnection;
 use lazy_static::lazy_static;

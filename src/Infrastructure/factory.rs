@@ -1,12 +1,12 @@
 use std::sync::Arc;
-use crate::application::ports::repositories::{UserRepositoryPort, UserQueryRepository, AuthServicePort};
-use crate::application::mappers::UserMapper;
-use crate::application::use_cases::user::*;
-use crate::infrastructure::repositories::{UserRepositoryImpl, UserQueryRepositoryImpl};
-use crate::infrastructure::auth::AuthServiceImpl;
+use crate::Application::ports::repositories::{UserRepositoryPort, UserQueryRepository, AuthServicePort};
+use crate::Application::mappers::UserMapper;
+use crate::Application::use_cases::user::*;
+use crate::Infrastructure::repositories::{UserRepositoryImpl, UserQueryRepositoryImpl};
+use crate::Infrastructure::auth::AuthServiceImpl;
 
 // Importamos el caso de uso corregido
-use crate::application::use_cases::user::create_with_preferences::CreateUserWithPreferencesUseCase;
+use crate::Application::use_cases::user::create_with_preferences::CreateUserWithPreferencesUseCase;
 
 pub fn create_dependencies() -> AppDependencies {
     // Crear instancias de repositorios

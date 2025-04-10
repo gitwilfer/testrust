@@ -1,7 +1,7 @@
 // Este módulo contiene el controlador para el recurso de usuario.
 // Define los handlers para las rutas de usuario.
 use actix_web::{web, HttpResponse, post, get, put, delete, Error};
-use crate::application::use_cases::{
+use crate::Application::use_cases::{
     CreateUserUseCase, 
     FindUserByIdUseCase, 
     FindUserByUsernameUseCase, 
@@ -9,8 +9,8 @@ use crate::application::use_cases::{
     UpdateUserUseCase, 
     DeleteUserUseCase
 };
-use crate::application::dtos::create_user_dto::CreateUserDto;
-use crate::application::dtos::update_user_dto::UpdateUserDto;
+use crate::Application::dtos::create_user_dto::CreateUserDto;
+use crate::Application::dtos::update_user_dto::UpdateUserDto;
 use std::sync::Arc;
 use uuid::Uuid;
 use crate::presentation::api::middleware::map_error;

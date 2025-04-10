@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use uuid::Uuid;
-use crate::application::dtos::user_dto::UserResponseDto;
-use crate::application::dtos::create_user_dto::CreateUserDto;
-use crate::application::dtos::update_user_dto::UpdateUserDto;
-use crate::application::dtos::auth_dto::{LoginDto, TokenDto};
-use crate::application::errors::application_error::ApplicationError;
+use crate::Application::dtos::user_dto::UserResponseDto;
+use crate::Application::dtos::create_user_dto::CreateUserDto;
+use crate::Application::dtos::update_user_dto::UpdateUserDto;
+use crate::Application::dtos::auth_dto::{LoginDto, TokenDto};
+use crate::Application::errors::application_error::ApplicationError;
 
 #[async_trait]
 pub trait CreateUserUseCase: Send + Sync {

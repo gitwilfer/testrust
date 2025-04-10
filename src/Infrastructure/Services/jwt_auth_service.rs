@@ -1,6 +1,6 @@
 use anyhow::Error;
 use uuid::Uuid;
-use crate::domain::services::AuthService;
+use crate::Domain::services::AuthService;
 use bcrypt::{hash, verify, DEFAULT_COST};
 
 #[derive(Clone)]

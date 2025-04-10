@@ -8,10 +8,8 @@
  use std::io::Write;
  use std::sync::Arc;
  // Usar el nombre del crate 'anyb' para acceder a la biblioteca (lib.rs)
- use anyb::container::AppState;
- use anyb::infrastructure;
- use anyb::application;
- use anyb::presentation;
+ use anyb::container::AppState; // Solo importar AppState explícitamente
+ // Las rutas a infrastructure, application, presentation se usarán completas
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -19,7 +17,7 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
     // Obtener configuración
-    let config = anyb::infrastructure::config::app_config::get_config();
+    let config = anyb::Infrastructure::config::app_config::get_config(); // Corregir capitalización
     
     // Inicializar el logger con nivel basado en configuración
     let log_level = match config.log_level.as_str() {
@@ -48,7 +46,7 @@ async fn main() -> std::io::Result<()> {
     info!("Configuración cargada: {:?}", config);
 
     // Inicializar conexiones a bases de datos usando la configuración
-    match anyb::infrastructure::persistence::database::initialize_with_config(&config) {
+    match anyb::Infrastructure::Persistence::database::initialize_with_config(&config) { // Corregir capitalización (Infrastructure y Persistence)
         Ok(_) => info!("Conexiones a bases de datos inicializadas correctamente"),
         Err(e) => {
             log::error!("Error al inicializar conexiones a bases de datos: {}", e);
@@ -57,36 +55,35 @@ async fn main() -> std::io::Result<()> {
     }
 
     // Inicializar mapeado de entidades a bases de datos
-    anyb::application::services::initialize_database_mappings();
+    anyb::Application::services::initialize_database_mappings(); // Corregir capitalización
 
     // Clonar el config para usarlo después del move
     let server_config = config.clone();
 
     info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
     
-        // --- Construir el estado de la aplicación --- ANTES de HttpServer::new
-        // La construcción de dependencias ahora está encapsulada en AppState::build()
-        let app_state = match AppState::build() {
-            Ok(state) => state,
-            Err(e) => {
-                log::error!("Error al construir el estado de la aplicación: {:?}", e);
-                // Podrías usar std::process::exit(1) o retornar un error específico aquí
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Error de inicialización de estado"));
-            }
-        };
+    // --- Construir el estado de la aplicación --- ANTES de HttpServer::new
+    // La construcción de dependencias ahora está encapsulada en AppState::build()
+    // Simplificamos el manejo de errores con expect() para asegurar que app_state se inicialice.
+    // En producción, manejar el error de forma más robusta (log, retornar error).
+    let app_state = AppState::build()
+        .expect("Error fatal al construir el estado de la aplicación");
+
+    // Clonamos el estado ANTES de moverlo a la clausura.
+    let app_state_for_server = app_state.clone();
     
-        HttpServer::new(move || {
-                // Clonamos el AppState (capturado por 'move') para cada worker.
-                let app_state_clone = app_state.clone();
-    
-                App::new()
-                    // Registrar los datos compartidos desde AppState
-                    .app_data(app_state_clone.auth_controller_data.clone())
-                    // Aquí registrarías otros datos de app_state_clone si los hubiera
-                    // .app_data(app_state_clone.user_controller_data.clone())
-    
-                    // Configurar rutas API (usando el módulo presentation importado)
-                    .configure(anyb::presentation::api::routes::config) // Usar anyb::presentation
+    HttpServer::new(move || {
+            // Usamos el estado clonado que fue movido a la clausura.
+            let app_state_clone = app_state_for_server.clone();
+
+            App::new()
+                // Registrar los datos compartidos desde AppState
+                .app_data(app_state_clone.auth_controller_data.clone())
+                // Aquí registrarías otros datos de app_state_clone si los hubiera
+                // .app_data(app_state_clone.user_controller_data.clone())
+
+                // Configurar rutas API (usando la ruta completa)
+                .configure(anyb::Presentation::api::routes::config) // Corregir capitalización
     
                     // Añadir Swagger si está activado
                     // (Considera mover esta lógica también a una función de configuración si crece)

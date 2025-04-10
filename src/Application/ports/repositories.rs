@@ -3,7 +3,7 @@ use std::future::Future;
 use std::pin::Pin;
 use anyhow::Result;
 use uuid::Uuid;
-use crate::domain::entities::user::User;
+use crate::Domain::entities::user::User;
 use async_trait::async_trait;
 
 

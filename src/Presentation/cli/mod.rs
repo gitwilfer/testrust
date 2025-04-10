@@ -3,10 +3,10 @@
 // Este módulo contiene el código para la interfaz de línea de comandos.
 // Define los comandos y la lógica para interactuar con la aplicación.
 use clap::{Parser, Subcommand};
-use crate::application::use_cases::user::{CreateUserUseCase, FindUserByIdUseCase, FindUserByUsernameUseCase, FindAllUsersUseCase, UpdateUserUseCase, DeleteUserUseCase};
+use crate::Application::use_cases::user::{CreateUserUseCase, FindUserByIdUseCase, FindUserByUsernameUseCase, FindAllUsersUseCase, UpdateUserUseCase, DeleteUserUseCase};
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::application;
+use crate::Application;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

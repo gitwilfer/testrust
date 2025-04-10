@@ -2,7 +2,7 @@
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 use diesel::prelude::*;
-use crate::infrastructure::persistence::schema::entidades;
+use crate::Infrastructure::Persistence::schema::entidades;
 
 #[derive(Debug, Queryable, Insertable, AsChangeset)]
 #[diesel(table_name = entidades)]
@@ -41,7 +41,7 @@ pub struct EntityModel {
 // Mapper para convertir entre modelos de persistencia y entidades de dominio
 pub mod mapper {
     use super::*;
-    use crate::domain::entities::entity::Entity;
+    use crate::Domain::entities::entity::Entity;
     
     /// Convierte una entidad de dominio a un modelo de persistencia
     pub fn entity_to_model(entity: &Entity) -> EntityModel {
