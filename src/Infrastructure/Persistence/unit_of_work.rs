@@ -127,11 +127,12 @@ impl HybridUnitOfWork {
 // Implementación concreta de UnitOfWork que usa DatabaseManager
 pub struct DatabaseUnitOfWork {
     pool: Arc<Pool<ConnectionManager<PgConnection>>>,
+    sqlx_pool: Arc<sqlx::Pool<sqlx::Postgres>>,
 }
 
 impl DatabaseUnitOfWork {
     pub fn new(pool: Arc<Pool<ConnectionManager<PgConnection>>>) -> Self {
-        Self { pool }
+        Self { pool, sqlx_pool }
     }
     
     // Método para ejecutar operaciones en transacción
@@ -139,9 +140,10 @@ impl DatabaseUnitOfWork {
         let mut conn = self.pool.get()?;
         
         conn.transaction(|_conn| {
-            // En una implementación real, usaríamos _conn para las operaciones
-            // Para simplificar, usamos el pool directamente
-            let registry = DatabaseRepositoryRegistry::new(self.pool.clone());
+            let registry = DatabaseRepositoryRegistry::new
+                            (self.pool.clone(),
+                            self.sqlx_pool.clone()
+                        );
             
             // Creamos el usuario
             let user_repo = registry.user_repository();
