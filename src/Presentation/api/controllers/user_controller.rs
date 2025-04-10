@@ -92,7 +92,7 @@ async fn create_user(
         // Aquí es donde aplicamos el cambio
         Err(app_error) => {
             // Convertimos ApplicationError directamente en HttpResponse usando el adaptador
-            Ok(crate::presentation::api::adapters::ErrorAdapter::map_application_error(app_error))
+            Ok(crate::Presentation::api::adapters::ErrorAdapter::map_application_error(app_error))
         },
     }
 }
