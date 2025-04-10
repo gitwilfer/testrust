@@ -97,6 +97,7 @@ async fn main() -> std::io::Result<()> {
                     // })
             })
     .bind((server_config.http_host.clone(), server_config.http_port))?
+    .workers(4)
     .run()
     .await
 }
