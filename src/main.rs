@@ -1,16 +1,17 @@
- // No declarar módulos aquí, ya están en src/lib.rs
- mod container; // Añadir declaración del módulo container
+ // 'container' es parte de la biblioteca (lib.rs), no se declara aquí.
+ // Se accede a través de 'anyb::container'
 
- use actix_web::{web, App, HttpServer}; // Añadido web
+ use actix_web::{web, App, HttpServer};
  use dotenv::dotenv;
  use log::{info, LevelFilter};
  use env_logger::Builder;
  use std::io::Write;
  use std::sync::Arc;
- use crate::container::AppState; // Importar AppState desde el crate
- use crate::infrastructure; // Importar para acceder a sub-módulos como config y persistence
- use crate::application; // Importar para acceder a sub-módulos como services
- use crate::presentation; // Importar para acceder a sub-módulos como api
+ // Usar el nombre del crate 'anyb' para acceder a la biblioteca (lib.rs)
+ use anyb::container::AppState;
+ use anyb::infrastructure;
+ use anyb::application;
+ use anyb::presentation;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -18,7 +19,7 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
     // Obtener configuración
-    let config = infrastructure::config::app_config::get_config();
+    let config = anyb::infrastructure::config::app_config::get_config();
     
     // Inicializar el logger con nivel basado en configuración
     let log_level = match config.log_level.as_str() {
@@ -47,7 +48,7 @@ async fn main() -> std::io::Result<()> {
     info!("Configuración cargada: {:?}", config);
 
     // Inicializar conexiones a bases de datos usando la configuración
-    match infrastructure::persistence::database::initialize_with_config(&config) {
+    match anyb::infrastructure::persistence::database::initialize_with_config(&config) {
         Ok(_) => info!("Conexiones a bases de datos inicializadas correctamente"),
         Err(e) => {
             log::error!("Error al inicializar conexiones a bases de datos: {}", e);
@@ -56,37 +57,48 @@ async fn main() -> std::io::Result<()> {
     }
 
     // Inicializar mapeado de entidades a bases de datos
-    application::services::initialize_database_mappings();
+    anyb::application::services::initialize_database_mappings();
 
     // Clonar el config para usarlo después del move
     let server_config = config.clone();
 
     info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
     
-    HttpServer::new(move || {
-            // Clonamos el AppState para cada worker del servidor HTTP.
-            // AppState deriva Clone, por lo que esto es eficiente (clona Arcs/web::Data).
-            // Nota: La creación de app_state se movió fuera de la clausura.
-            let app_state_clone = app_state.clone();
+        // --- Construir el estado de la aplicación --- ANTES de HttpServer::new
+        // La construcción de dependencias ahora está encapsulada en AppState::build()
+        let app_state = match AppState::build() {
+            Ok(state) => state,
+            Err(e) => {
+                log::error!("Error al construir el estado de la aplicación: {:?}", e);
+                // Podrías usar std::process::exit(1) o retornar un error específico aquí
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Error de inicialización de estado"));
+            }
+        };
     
-            App::new()
-                // Registrar los datos compartidos desde AppState
-                .app_data(app_state_clone.auth_controller_data.clone())
-                // Aquí registrarías otros datos de app_state_clone si los hubiera
-                // .app_data(app_state_clone.user_controller_data.clone())
+        HttpServer::new(move || {
+                // Clonamos el AppState (capturado por 'move') para cada worker.
+                let app_state_clone = app_state.clone();
     
-                // Configurar rutas API (usando el módulo presentation importado)
-                .configure(presentation::api::routes::config)
+                App::new()
+                    // Registrar los datos compartidos desde AppState
+                    .app_data(app_state_clone.auth_controller_data.clone())
+                    // Aquí registrarías otros datos de app_state_clone si los hubiera
+                    // .app_data(app_state_clone.user_controller_data.clone())
     
-                // Añadir Swagger si está activado
-                // (Considera mover esta lógica también a una función de configuración si crece)
-                // .configure(|cfg| {
-                //     if server_config.enable_swagger { // Necesitamos clonar server_config o config para usarla aquí
-                //         info!("Swagger UI enabled at /swagger-ui");
-                //         // Configuración de Swagger aquí...
-                //     }
-                // })
-        })
+                    // Configurar rutas API (usando el módulo presentation importado)
+                    .configure(anyb::presentation::api::routes::config) // Usar anyb::presentation
+    
+                    // Añadir Swagger si está activado
+                    // (Considera mover esta lógica también a una función de configuración si crece)
+                    // .configure(|cfg| {
+                    //     // Necesitamos clonar server_config o config para usarla aquí si se descomenta
+                    //     let config_clone = server_config.clone();
+                    //     if config_clone.enable_swagger {
+                    //         info!("Swagger UI enabled at /swagger-ui");
+                    //         // Configuración de Swagger aquí...
+                    //     }
+                    // })
+            })
     .bind((server_config.http_host.clone(), server_config.http_port))?
     .run()
     .await
