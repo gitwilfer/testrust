@@ -1,6 +1,6 @@
-// src/Infrastructure/monitoring/database_health_monitor.rs
+// src/Infrastructure/monitoring/database_health_monitor.rs (versión corregida)
 
-use std::sync::{Arc, Mutex}; // ⭐ Usamos std::sync::Mutex en lugar de tokio::sync
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::interval;
 use log::{info, warn, error};
@@ -18,7 +18,6 @@ pub struct DatabaseHealth {
 }
 
 pub struct DatabaseHealthMonitor {
-    // ⭐ Usamos std::sync::Mutex en lugar de tokio::sync para evitar bloqueos asíncronos en el spawn
     health_data: Arc<Mutex<Vec<DatabaseHealth>>>,
     last_check: Arc<Mutex<Option<Instant>>>,
     check_interval: Duration,
@@ -45,12 +44,17 @@ impl DatabaseHealthMonitor {
             loop {
                 interval_timer.tick().await;
                 
-                // ⭐ Ejecutamos check_database_health de manera segura
-                // Al hacerlo en una función separada, evitamos que la captura sea problemática
-                let diesel_health = collect_diesel_health();
+                // Capturamos el tiempo de inicio antes de cualquier operación
+                let start = Instant::now();
+                let now = chrono::Utc::now();
+                
+                // Verificar salud de Diesel de manera segura
+                // Clonamos para evitar capturar referencias
+                let diesel_health = database::check_database_health().clone();
                 
                 // Verificar salud de SQLx
-                let sqlx_health_result = match sqlx_database::check_database_health().await {
+                // La función ya ha sido corregida para ser segura
+                let sqlx_health = match sqlx_database::check_database_health().await {
                     Ok(health) => health,
                     Err(e) => {
                         error!("Error al verificar salud de bases de datos SQLx: {}", e);
@@ -60,8 +64,6 @@ impl DatabaseHealthMonitor {
                 
                 // Preparar nuevos datos de salud
                 let mut health_entries = Vec::new();
-                let now = chrono::Utc::now();
-                let start = Instant::now();
                 
                 // Procesar resultados Diesel
                 for (name, healthy) in diesel_health {
@@ -79,7 +81,7 @@ impl DatabaseHealthMonitor {
                 }
                 
                 // Procesar resultados SQLx
-                for (name, healthy) in sqlx_health_result {
+                for (name, healthy) in sqlx_health {
                     let response_time = start.elapsed().as_millis() as u64;
                     health_entries.push(DatabaseHealth {
                         name: format!("sqlx_{}", name),
@@ -93,13 +95,17 @@ impl DatabaseHealthMonitor {
                     }
                 }
                 
-                // Actualizar datos compartidos con locks sincronos (no asíncronos)
+                // Actualizar datos compartidos
                 if let Ok(mut data) = health_data.lock() {
                     *data = health_entries;
+                } else {
+                    error!("No se pudo obtener lock para actualizar health_data");
                 }
                 
-                if let Ok(mut last) = last_check.lock() {
-                    *last = Some(start);
+                if let Ok(mut check_time) = last_check.lock() {
+                    *check_time = Some(start);
+                } else {
+                    error!("No se pudo obtener lock para actualizar last_check");
                 }
                 
                 info!("Verificación de salud de bases de datos completada");
@@ -107,33 +113,34 @@ impl DatabaseHealthMonitor {
         });
     }
     
-    // Obtener datos de salud actuales
+    // Métodos para acceder a los datos (no cambian)
     pub async fn get_health_data(&self) -> Vec<DatabaseHealth> {
         match self.health_data.lock() {
             Ok(data) => data.clone(),
-            Err(_) => Vec::new(), // En caso de error, retornar vector vacío
+            Err(_) => {
+                error!("No se pudo obtener lock para leer health_data");
+                Vec::new()
+            },
         }
     }
     
-    // Verificar si todas las bases de datos están saludables
     pub async fn all_healthy(&self) -> bool {
         match self.health_data.lock() {
             Ok(data) => data.iter().all(|h| h.healthy),
-            Err(_) => false, // Si hay error, considerar no saludable
+            Err(_) => {
+                error!("No se pudo obtener lock para verificar health_data");
+                false
+            },
         }
     }
     
-    // Obtener tiempo desde la última verificación
     pub async fn time_since_last_check(&self) -> Option<Duration> {
         match self.last_check.lock() {
             Ok(last) => last.map(|t| t.elapsed()),
-            Err(_) => None,
+            Err(_) => {
+                error!("No se pudo obtener lock para leer last_check");
+                None
+            },
         }
     }
-}
-
-// ⭐ Función separada para ejecutar check_database_health
-// Esto evita capturar potenciales referencias problemáticas
-fn collect_diesel_health() -> HashMap<String, bool> {
-    database::check_database_health()
 }

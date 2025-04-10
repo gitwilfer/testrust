@@ -289,10 +289,34 @@ pub fn get_default_database_name() -> Option<String> {
     }
 }
 
-// Función para verificar el estado de todas las conexiones
 pub async fn check_database_health() -> Result<HashMap<String, bool>> {
-    let manager = SQLX_DB_MANAGER.lock()
-        .map_err(|_| anyhow!("Error al obtener lock del gestor de bases de datos SQLx"))?;
+    // Obtenemos el HashMap de pools primero, liberando el lock inmediatamente
+    let pools_clone = {
+        let manager = SQLX_DB_MANAGER.lock()
+            .map_err(|_| anyhow!("Error al obtener lock del gestor de bases de datos SQLx"))?;
+        
+        // Clonar solo los nombres y pools para no mantener el MutexGuard
+        let mut pools_map = HashMap::new();
+        for (name, pool) in &manager.pools {
+            pools_map.insert(name.clone(), pool.clone());
+        }
+        pools_map
+    }; // El MutexGuard se libera aquí al finalizar el bloque
     
-    Ok(manager.check_health().await)
+    // Ahora verificamos la salud de cada pool con el HashMap clonado
+    let mut results = HashMap::new();
+    
+    for (name, pool) in pools_clone {
+        let is_healthy = match pool.acquire().await {
+            Ok(_) => true,
+            Err(e) => {
+                error!("Error en pool SQLx {}: {}", name, e);
+                false
+            }
+        };
+        
+        results.insert(name, is_healthy);
+    }
+    
+    Ok(results)
 }
