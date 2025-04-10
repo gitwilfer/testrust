@@ -34,7 +34,7 @@ impl DeleteUserUseCase {
 }
 
 #[async_trait::async_trait]
-impl crate::application::use_cases::traits::DeleteUserUseCase for DeleteUserUseCase {
+impl crate::Application::use_cases::traits::DeleteUserUseCase for DeleteUserUseCase {
     async fn execute(&self, id: Uuid) -> Result<(), ApplicationError> {
         self.execute(id).await
     }

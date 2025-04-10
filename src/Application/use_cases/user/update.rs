@@ -79,7 +79,7 @@ impl UpdateUserUseCase {
 }
 
 #[async_trait]
-impl crate::application::use_cases::traits::UpdateUserUseCase for UpdateUserUseCase {
+impl crate::Application::use_cases::traits::UpdateUserUseCase for UpdateUserUseCase {
     async fn execute(&self, id: Uuid, update_dto: UpdateUserDto, modified_by: Option<Uuid>) -> Result<UserResponseDto, ApplicationError> {
         self.execute(id, update_dto, modified_by).await
     }

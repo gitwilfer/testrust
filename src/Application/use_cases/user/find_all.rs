@@ -37,7 +37,7 @@ impl FindAllUsersUseCase {
 }
 
 #[async_trait::async_trait]
-impl crate::application::use_cases::traits::FindAllUsersUseCase for FindAllUsersUseCase {
+impl crate::Application::use_cases::traits::FindAllUsersUseCase for FindAllUsersUseCase {
     async fn execute(&self) -> Result<Vec<UserResponseDto>, ApplicationError> {
         self.execute().await
     }

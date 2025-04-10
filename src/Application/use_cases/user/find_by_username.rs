@@ -38,7 +38,7 @@ impl FindUserByUsernameUseCase {
 }
 
 #[async_trait::async_trait]
-impl crate::application::use_cases::traits::FindUserByUsernameUseCase for FindUserByUsernameUseCase {
+impl crate::Application::use_cases::traits::FindUserByUsernameUseCase for FindUserByUsernameUseCase {
     async fn execute(&self, username: &str) -> Result<UserResponseDto, ApplicationError> {
         self.execute(username).await
     }

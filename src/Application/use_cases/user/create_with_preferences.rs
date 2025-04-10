@@ -59,7 +59,7 @@ impl CreateUserWithPreferencesUseCase {
 
     pub async fn execute(&self, user_dto: CreateUserDto, preferences: Vec<UserPreference>) -> Result<UserResponseDto, ApplicationError> {
         // 1. Validar campos usando el validador
-        if let Err(e) = crate::application::validators::user_validator::UserValidator::validate_create_dto(&user_dto) {
+        if let Err(e) = crate::Application::validators::user_validator::UserValidator::validate_create_dto(&user_dto) {
             return Err(ApplicationError::ValidationError(e.to_string()));
         }
 

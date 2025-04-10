@@ -69,7 +69,7 @@ impl CreateUserUseCase {
 }
 
 #[async_trait::async_trait]
-impl crate::application::use_cases::traits::CreateUserUseCase for CreateUserUseCase {
+impl crate::Application::use_cases::traits::CreateUserUseCase for CreateUserUseCase {
     async fn execute(&self, user_dto: CreateUserDto) -> Result<UserResponseDto, ApplicationError> {
         self.execute(user_dto).await
     }
