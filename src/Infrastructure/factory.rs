@@ -125,6 +125,7 @@ pub fn create_dependencies() -> Result<AppDependencies> {
     
     let update_user_use_case = Arc::new(update::UpdateUserUseCase::new(
         user_repository.clone(),
+        user_query_repository.clone(),
         user_mapper.clone(),
         auth_service.clone(),
     ));
