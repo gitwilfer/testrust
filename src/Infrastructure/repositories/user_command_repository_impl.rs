@@ -25,7 +25,7 @@ impl UserCommandRepositoryImpl {
                 drop(conn_ref);
                 Arc::new(database::get_pool_from_connection())
             },
-            Err(_) => return Err(anyhow::anyhow!("No se pudo obtener el pool de conexiones principal")),
+            Err(e) => return Err(anyhow::anyhow!("No se pudo obtener el pool de conexiones principal: {}", e)),
         };
         
         Ok(Self { pool })
@@ -57,7 +57,7 @@ impl UserCommandRepository for UserCommandRepositoryImpl {
         
         Ok(user)
     }
-    
+
     async fn update(&self, user: User) -> Result<User> {
         let mut conn = self.get_connection().await?;
         let user_model = user_to_model(&user);

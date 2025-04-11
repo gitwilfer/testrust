@@ -8,6 +8,7 @@ use crate::Infrastructure::repositories::{UserRepositoryImpl, UserQueryRepositor
 use crate::Infrastructure::auth::AuthServiceImpl;
 use crate::Infrastructure::Persistence::database;
 use crate::Infrastructure::Persistence::sqlx_database;
+use crate::Infrastructure::repositories::UserCommandRepositoryImpl;
 use crate::Application::use_cases::user::login::LoginUseCase;
 use crate::Application::use_cases::user::find_by_username_optimized::FindUserByUsernameOptimizedUseCase;
 use crate::Presentation::api::controllers::{AuthController, UserController};
@@ -39,7 +40,8 @@ impl AppState {
         
         // Instanciar repositorios
         let user_repository = Arc::new(UserRepositoryImpl::new()?);
-        let user_query_repository = Arc::new(UserQueryRepositorySqlx::with_pool(sqlx_pool_arc));
+        let user_query_repository = Arc::new(UserQueryRepositorySqlx::with_pool(sqlx_pool_arc.clone()));
+        let user_command_repository = Arc::new(UserCommandRepositoryImpl::new()?);
         let auth_service = Arc::new(AuthServiceImpl::new()?);
         let user_mapper = Arc::new(UserMapper::new());
         
@@ -84,7 +86,8 @@ impl AppState {
                 user_mapper.clone()
             )),
             Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
-                user_repository.clone(),
+                user_query_repository.clone(),
+                user_command_repository.clone(),
                 user_mapper.clone(),
                 auth_service.clone()
             )),
@@ -104,10 +107,8 @@ impl AppState {
             health_controller_data,
         })
     }
-
-    pub fn build() -> Result<Self> {
-        // --- Instanciación de Dependencias ---
     
+    pub fn build() -> Result<Self> {
         // 1. Capa de Infraestructura (Repositorios y Servicios)
         let user_repo = Arc::new(
             UserRepositoryImpl::new()
@@ -120,42 +121,51 @@ impl AppState {
                 .context("Failed to create UserQueryRepositoryImpl")?
         );
         
+        // Crear explícitamente el repositorio de comandos
+        let user_command_repository = Arc::new(
+            UserCommandRepositoryImpl::new()
+                .context("Failed to create UserCommandRepositoryImpl")?
+        );
+        
         let auth_service = Arc::new(
             AuthServiceImpl::new()
                 .context("Failed to create AuthServiceImpl")?
         );
+        
+        let user_mapper = Arc::new(UserMapper::new());
     
         // 2. Capa de Aplicación (Casos de Uso)
         // Se inyectan las dependencias de infraestructura necesarias.
         let login_use_case = Arc::new(
             LoginUseCase::new(
-                user_query_repository.clone(), // Ahora usando el repositorio de consulta
+                user_query_repository.clone(),
                 auth_service.clone()
             )
         );
         
-        // Crear un controlador de usuario vacío para la implementación básica
+        // Crear un controlador de usuario para la implementación básica
         let user_controller = UserController::new(
             Arc::new(crate::Application::use_cases::user::create::CreateUserUseCase::new(
                 user_repo.clone(),
                 auth_service.clone(),
-                Arc::new(UserMapper::new())
+                user_mapper.clone()
             )),
             Arc::new(crate::Application::use_cases::user::find_by_id::FindUserByIdUseCase::new(
                 user_repo.clone(),
-                Arc::new(UserMapper::new())
+                user_mapper.clone()
             )),
             Arc::new(crate::Application::use_cases::user::find_by_username::FindUserByUsernameUseCase::new(
                 user_repo.clone(),
-                Arc::new(UserMapper::new())
+                user_mapper.clone()
             )),
             Arc::new(crate::Application::use_cases::user::find_all::FindAllUsersUseCase::new(
                 user_repo.clone(),
-                Arc::new(UserMapper::new())
+                user_mapper.clone()
             )),
             Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
-                user_repo.clone(),
-                Arc::new(UserMapper::new()),
+                user_query_repository.clone(),
+                user_command_repository.clone(),
+                user_mapper.clone(),
                 auth_service.clone()
             )),
             Arc::new(crate::Application::use_cases::user::delete::DeleteUserUseCase::new(
@@ -167,17 +177,18 @@ impl AppState {
         let db_monitor = Arc::new(DatabaseHealthMonitor::new(60));
         db_monitor.start_monitoring();
         let health_controller = HealthController::new(db_monitor);
-    
+
         // 4. Envolver controladores en web::Data para compartirlos
-        let auth_controller_data = web::Data::new(AuthController::new(login_use_case.clone()));
+        let auth_controller_data = web::Data::new(AuthController::new(login_use_case));
         let user_controller_data = web::Data::new(user_controller);
         let health_controller_data = web::Data::new(health_controller);
-    
+
         // 5. Construir y devolver el AppState
         Ok(AppState {
             auth_controller_data,
             user_controller_data,
             health_controller_data,
         })
+
     }
 }
