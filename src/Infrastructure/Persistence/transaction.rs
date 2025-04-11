@@ -3,8 +3,8 @@ use anyhow::Result;
 use diesel::PgConnection;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use std::future::Future;
-use std::pin::Pin;
-use log::{debug, error};
+// use std::pin::Pin;
+use log::debug;
 
 pub type DbConnection = PooledConnection<ConnectionManager<PgConnection>>;
 

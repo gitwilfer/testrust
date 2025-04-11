@@ -2,7 +2,7 @@
 
 use anyhow::{Result, anyhow, Context};
 use lazy_static::lazy_static;
-use log::{error, info, debug};
+use log::{error, info};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::collections::HashMap;
 use std::env;

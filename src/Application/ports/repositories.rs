@@ -1,6 +1,6 @@
 // src/Application/ports/repositories.rs
 use std::future::Future;
-use std::pin::Pin;
+// use std::pin::Pin;
 use anyhow::Result;
 use uuid::Uuid;
 use crate::Domain::entities::user::User;
@@ -59,6 +59,7 @@ pub trait UserQueryRepository: Send + Sync {
 }
 
 // Command (comandos) - Operaciones de escritura
+
 #[async_trait]
 pub trait UserCommandRepository: Send + Sync {
     async fn create(&self, user: User) -> Result<User>;

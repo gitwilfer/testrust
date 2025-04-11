@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use uuid::Uuid;
 use anyhow::Result;
-use async_trait::async_trait;
+// use async_trait::async_trait;
 use chrono::Utc;
 
 use crate::Application::dtos::create_user_dto::CreateUserDto;

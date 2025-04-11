@@ -2,7 +2,7 @@ use crate::Domain::entities::user::User;
 use crate::Application::dtos::user_dto::UserResponseDto;
 use crate::Application::dtos::create_user_dto::CreateUserDto;
 use crate::Application::dtos::update_user_dto::UpdateUserDto;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use uuid::Uuid;
 use chrono::Utc;
 
