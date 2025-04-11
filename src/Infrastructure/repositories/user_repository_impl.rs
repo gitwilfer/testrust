@@ -113,7 +113,6 @@ impl UserRepositoryImpl {
     }
     
     // Función genérica para ejecutar operaciones en transacción
-    // La clave está aquí: se debe asegurar que el tipo de retorno sea consistente
     async fn execute_db_transaction<F, T>(&self, operation: F) -> Result<T>
     where
         F: FnOnce(&mut PgConnection) -> Result<T> + Send + 'static,
@@ -123,7 +122,7 @@ impl UserRepositoryImpl {
         let pool = self.pool.clone();
         
         // Ejecutar operación en un hilo separado para no bloquear
-        let result = web::block(move || {
+        match web::block(move || {
             let mut conn = pool.get()?;
             
             // Ejecutar la operación dentro de una transacción
@@ -137,14 +136,13 @@ impl UserRepositoryImpl {
                 }
             })
         })
-        .await
-        .map_err(|e| {
-            error!("Error al ejecutar transacción: {:?}", e);
-            anyhow!("Error de base de datos: {}", e)
-        })?;
-        
-        // Aquí está la corrección: asegurarse de devolver el tipo correcto
-        Ok(result)
+        .await {
+            Ok(result) => Ok(result),
+            Err(e) => {
+                error!("Error al ejecutar transacción: {:?}", e);
+                Err(anyhow!("Error de base de datos: {}", e))
+            }
+        }
     }
 }
 
