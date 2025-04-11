@@ -105,31 +105,34 @@ impl AppState {
         })
     }
 
-
     pub fn build() -> Result<Self> {
         // --- Instanciación de Dependencias ---
-
+    
         // 1. Capa de Infraestructura (Repositorios y Servicios)
         let user_repo = Arc::new(
             UserRepositoryImpl::new()
                 .context("Failed to create UserRepositoryImpl")?
         );
+        
+        // Crear explícitamente el repositorio de consultas
+        let user_query_repository = Arc::new(
+            UserQueryRepositoryImpl::new()
+                .context("Failed to create UserQueryRepositoryImpl")?
+        );
+        
         let auth_service = Arc::new(
             AuthServiceImpl::new()
                 .context("Failed to create AuthServiceImpl")?
         );
-
+    
         // 2. Capa de Aplicación (Casos de Uso)
         // Se inyectan las dependencias de infraestructura necesarias.
         let login_use_case = Arc::new(
             LoginUseCase::new(
-                user_query_repository.clone(),
+                user_query_repository.clone(), // Ahora usando el repositorio de consulta
                 auth_service.clone()
-            ));
-        
-        // 3. Capa de Presentación (Controladores)
-        // Se inyectan los casos de uso necesarios.
-        let auth_controller = AuthController::new(login_use_case);
+            )
+        );
         
         // Crear un controlador de usuario vacío para la implementación básica
         let user_controller = UserController::new(
@@ -159,17 +162,17 @@ impl AppState {
                 user_repo.clone()
             ))
         );
-
+    
         // Crear un monitor de salud básico
         let db_monitor = Arc::new(DatabaseHealthMonitor::new(60));
         db_monitor.start_monitoring();
         let health_controller = HealthController::new(db_monitor);
-
+    
         // 4. Envolver controladores en web::Data para compartirlos
-        let auth_controller_data = web::Data::new(auth_controller);
+        let auth_controller_data = web::Data::new(AuthController::new(login_use_case.clone()));
         let user_controller_data = web::Data::new(user_controller);
         let health_controller_data = web::Data::new(health_controller);
-
+    
         // 5. Construir y devolver el AppState
         Ok(AppState {
             auth_controller_data,
