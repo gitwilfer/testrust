@@ -4,11 +4,10 @@ use anyhow::{Result, Context};
 
 // Importaciones de implementaciones concretas y controladores
 // Usamos 'crate::' para referirnos a los módulos definidos en src/lib.rs
-use crate::Infrastructure::repositories::{UserRepositoryImpl, UserQueryRepositoryImpl,UserQueryRepositorySqlx};
+use crate::Infrastructure::repositories::{UserRepositoryImpl, UserQueryRepositoryImpl, UserQueryRepositorySqlx, UserCommandRepositoryImpl};
 use crate::Infrastructure::auth::AuthServiceImpl;
 use crate::Infrastructure::Persistence::database;
 use crate::Infrastructure::Persistence::sqlx_database;
-use crate::Infrastructure::repositories::UserCommandRepositoryImpl;
 use crate::Application::use_cases::user::login::LoginUseCase;
 use crate::Application::use_cases::user::find_by_username_optimized::FindUserByUsernameOptimizedUseCase;
 use crate::Presentation::api::controllers::{AuthController, UserController};
@@ -62,13 +61,6 @@ impl AppState {
             user_query_repository.clone(),
             user_mapper.clone()
         ));
-
-        let update_user_use_case = Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
-            user_repository.clone(),       // Repositorio original para escritura
-            user_query_repository.clone(), // Repositorio de consulta (SQLx)
-            user_mapper.clone(),
-            auth_service.clone()
-        ));
         
         // Instanciar controladores
 
@@ -92,14 +84,12 @@ impl AppState {
                 user_repository.clone(),
                 user_mapper.clone()
             )),
-
             Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
-                ry_repository.clone(),
-                user_command_repository.clone(),
+                user_repository.clone(),       // Corregido: era "ry_repository"
+                user_query_repository.clone(), // Repositorio de consulta (SQLx)
                 user_mapper.clone(),
                 auth_service.clone()
             )),
-            
             Arc::new(crate::Application::use_cases::user::delete::DeleteUserUseCase::new(
                 user_repository.clone()
             ))
@@ -130,13 +120,6 @@ impl AppState {
                 .context("Failed to create UserQueryRepositoryImpl")?
         );
         
-        let update_user_use_case = Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
-            user_repo.clone(),             // Repositorio original para escritura
-            user_query_repository.clone(), // Repositorio de consulta
-            user_mapper.clone(),
-            auth_service.clone()
-        ));
-
         // Crear explícitamente el repositorio de comandos
         let user_command_repository = Arc::new(
             UserCommandRepositoryImpl::new()
@@ -159,13 +142,6 @@ impl AppState {
             )
         );
         
-        let update_user_use_case = Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
-            user_repository.clone(),       // Repositorio original para escritura
-            user_query_repository.clone(), // Repositorio de consulta (SQLx)
-            user_mapper.clone(),
-            auth_service.clone()
-        ));
-        
         // Crear un controlador de usuario para la implementación básica
         let user_controller = UserController::new(
             Arc::new(crate::Application::use_cases::user::create::CreateUserUseCase::new(
@@ -185,10 +161,9 @@ impl AppState {
                 user_repo.clone(),
                 user_mapper.clone()
             )),
-
             Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
+                user_repo.clone(),           // Corregido: usar user_repo en lugar de user_repository
                 user_query_repository.clone(),
-                user_command_repository.clone(),
                 user_mapper.clone(),
                 auth_service.clone()
             )),
@@ -213,6 +188,5 @@ impl AppState {
             user_controller_data,
             health_controller_data,
         })
-
     }
 }
