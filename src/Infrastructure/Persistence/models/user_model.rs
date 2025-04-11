@@ -36,6 +36,7 @@ pub struct UserModel {
     
     #[diesel(column_name = fecha_modificacion)]
     pub modified_at: Option<NaiveDateTime>,
-    
-    pub estado: i16,
+
+    #[diesel(column_name = estado)]
+    pub status: i16,
 }
