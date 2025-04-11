@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use crate::Application::dtos::auth_dto::LoginDto;
 use crate::Application::use_cases::traits::LoginUseCase;
-use crate::Presentation::api::middleware::map_error;
 use crate::Presentation::api::validators::validate_json;
 use crate::Presentation::api::responses::ApiResponse;
 use crate::Presentation::api::models::request::LoginRequest;
