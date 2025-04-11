@@ -141,7 +141,7 @@ impl UserQueryRepository for UserQueryRepositorySqlx {
                 apellido as last_name,
                 correo_electronico as email, 
                 contraseña as password,
-                status,
+                estado as status,
                 creado_por as created_by,
                 fecha_creacion as created_at,
                 modificado_por as modified_by,
