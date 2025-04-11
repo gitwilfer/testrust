@@ -20,17 +20,18 @@ pub struct DatabaseRepositoryRegistry {
 }
 
 impl DatabaseRepositoryRegistry {
-    pub fn new(diesel_pool: Arc<Pool<ConnectionManager<PgConnection>>>,
+    pub fn new(
+        diesel_pool: Arc<Pool<ConnectionManager<PgConnection>>>,
         sqlx_pool: Arc<sqlx::Pool<Postgres>>
     ) -> Result<Self> {
         Ok(Self {
-                user_repository: Arc::new(
-                    UserRepositoryImpl::new().expect("Failed to create UserRepositoryImpl")
-                ),
-                user_query_repository: Arc::new(
-                    UserQueryRepositorySqlx::with_pool(sqlx_pool)
-                ),
-            })
+            user_repository: Arc::new(
+                UserRepositoryImpl::new().expect("Failed to create UserRepositoryImpl")
+            ),
+            user_query_repository: Arc::new(
+                UserQueryRepositorySqlx::with_pool(sqlx_pool)
+            ),
+        })
     }
 }
 
@@ -124,6 +125,7 @@ impl HybridUnitOfWork {
         })
     }
 }
+
 // Implementación concreta de UnitOfWork que usa DatabaseManager
 pub struct DatabaseUnitOfWork {
     pool: Arc<Pool<ConnectionManager<PgConnection>>>,
@@ -131,7 +133,10 @@ pub struct DatabaseUnitOfWork {
 }
 
 impl DatabaseUnitOfWork {
-    pub fn new(pool: Arc<Pool<ConnectionManager<PgConnection>>>) -> Self {
+    pub fn new(
+        pool: Arc<Pool<ConnectionManager<PgConnection>>>,
+        sqlx_pool: Arc<sqlx::Pool<sqlx::Postgres>>
+    ) -> Self {
         Self { pool, sqlx_pool }
     }
     
@@ -140,10 +145,10 @@ impl DatabaseUnitOfWork {
         let mut conn = self.pool.get()?;
         
         conn.transaction(|_conn| {
-            let registry = DatabaseRepositoryRegistry::new
-                            (self.pool.clone(),
-                            self.sqlx_pool.clone()
-                        );
+            let registry = DatabaseRepositoryRegistry::new(
+                self.pool.clone(),
+                self.sqlx_pool.clone()
+            ).expect("Failed to create repository registry");
             
             // Creamos el usuario
             let user_repo = registry.user_repository();
@@ -161,7 +166,11 @@ impl DatabaseUnitOfWork {
         let mut conn = self.pool.get()?;
         
         conn.transaction(|_conn| {
-            let registry = DatabaseRepositoryRegistry::new(self.pool.clone());
+            let registry = DatabaseRepositoryRegistry::new(
+                self.pool.clone(),
+                self.sqlx_pool.clone()
+            ).expect("Failed to create repository registry");
+            
             let user_repo = registry.user_repository();
             
             let runtime = tokio::runtime::Handle::current();
