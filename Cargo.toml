@@ -4,31 +4,32 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "4.3.1"
-anyhow = "1.0.71"
-async-trait = "0.1.68"
-bcrypt = "0.14.0"
-chrono = { version = "0.4.26", features = ["serde"] }
-clap = "3.2.25"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros"] }
-diesel = { version = "2.1.0", features = ["postgres", "r2d2", "uuid", "chrono"] }
-dotenv = "0.15.0"
-env_logger = "0.10.0"
-jsonwebtoken = "9"
-log = "0.4.19"
+actix-web = "4.10.2"
+anyhow = "1.0.97"
+async-trait = "0.1.88"
+bcrypt = "0.17.0"
 bytes = "1" #
+chrono = { version = "0.4.26", features = ["serde"] }
+clap = "4.5.36"
+diesel = { version = "2.2.8", features = ["postgres", "r2d2", "uuid", "chrono"] }
+dotenv = "0.15.0"
+env_logger = "0.11.8"
+futures = "0.3"
+jsonwebtoken = "9"
+lazy_static = "1.4"
+log = "0.4.19"
+postgres = { version = "0.19.8", features = ["with-chrono-0_4", "with-uuid-1"] }
 r2d2 = "0.8.10"
 r2d2_postgres = "0.18"
-postgres = { version = "0.19.8", features = ["with-chrono-0_4", "with-uuid-1"] }
+regex = "1.5"
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.97"
-tokio = { version = "1.28.2", features = ["full"] }
+sqlx = { version = "0.8.3", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros"] }
+thiserror = "2.0.12"
+tokio = { version = "1.44.1", features = ["full"] }
 uuid = { version = "1.6.1", features = ["serde", "v4"] }
-validator = { version = "0.16", features = ["derive"] }
-regex = "1.5"
-lazy_static = "1.4"
-futures = "0.3"
-thiserror = "1.0"
+validator = { version = "0.20.0", features = ["derive"] }
+
 
 [profile.dev]
 panic = 'unwind'

@@ -2,6 +2,7 @@
 # Archivos y directorios específicos de Rust
 /target/
 /test/
+/src/html/
 **/*.rs.bk
 *.pdb
 Cargo.lock
