@@ -35,7 +35,12 @@ pub async fn create_dependencies_with_sqlx() -> Result<AppDependencies> {
         auth_service.clone(),
         user_mapper.clone(),
     ));
-    
+
+    let login_use_case = Arc::new(LoginUseCase::new(
+        user_query_repository.clone(), // Ahora usamos UserQueryRepositorySqlx
+        auth_service.clone()
+    ));
+
     // Crear otros casos de uso
     let create_user_use_case = Arc::new(create::CreateUserUseCase::new(
         user_repository.clone(),
@@ -81,6 +86,7 @@ pub async fn create_dependencies_with_sqlx() -> Result<AppDependencies> {
         update_user_use_case,
         delete_user_use_case,
         find_user_by_username_use_case,
+        login_use_case,
     })
 }
 
@@ -130,6 +136,11 @@ pub fn create_dependencies() -> Result<AppDependencies> {
         user_repository.clone(),
         user_mapper.clone(),
     ));
+
+    let login_use_case = Arc::new(LoginUseCase::new(
+        user_query_repository.clone(), // Usamos UserQueryRepositoryImpl
+        auth_service.clone()
+    ));
     
     // Crear y devolver las dependencias
     Ok(AppDependencies {
@@ -144,6 +155,7 @@ pub fn create_dependencies() -> Result<AppDependencies> {
         update_user_use_case,
         delete_user_use_case,
         find_user_by_username_use_case,
+        login_use_case,
     })
 }
 
@@ -162,4 +174,5 @@ pub struct AppDependencies {
     pub update_user_use_case: Arc<update::UpdateUserUseCase>,
     pub delete_user_use_case: Arc<delete::DeleteUserUseCase>,
     pub find_user_by_username_use_case: Arc<find_by_username::FindUserByUsernameUseCase>,
+    pub login_use_case: Arc<login::LoginUseCase>,
 }

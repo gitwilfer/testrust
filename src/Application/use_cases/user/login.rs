@@ -4,27 +4,30 @@ use std::sync::Arc;
 
 use crate::Application::dtos::auth_dto::{LoginDto, TokenDto};
 use crate::Application::errors::application_error::ApplicationError;
-use crate::Application::ports::repositories::{UserRepositoryPort, AuthServicePort};
+// Cambio clave: importar el puerto de consulta en lugar del repositorio general
+use crate::Application::ports::repositories::{UserQueryRepository, AuthServicePort};
 
 pub struct LoginUseCase {
-    user_repository: Arc<dyn UserRepositoryPort>,
+    // Cambio: Usar UserQueryRepository en lugar de UserRepositoryPort
+    user_query_repository: Arc<dyn UserQueryRepository>,
     auth_service: Arc<dyn AuthServicePort>,
 }
 
 impl LoginUseCase {
     pub fn new(
-        user_repository: Arc<dyn UserRepositoryPort>,
+        // Cambio: Recibir el repositorio de consulta
+        user_query_repository: Arc<dyn UserQueryRepository>,
         auth_service: Arc<dyn AuthServicePort>,
     ) -> Self {
         LoginUseCase {
-            user_repository,
+            user_query_repository,
             auth_service,
         }
     }
 
     pub async fn execute(&self, login_dto: LoginDto) -> Result<TokenDto, ApplicationError> {
-        // 1. Buscar usuario por username
-        let user = self.user_repository.find_by_username(&login_dto.username).await
+        // 1. Buscar usuario por username usando el repositorio de consulta
+        let user = self.user_query_repository.find_by_username(&login_dto.username).await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
             .ok_or_else(|| ApplicationError::AuthenticationError("Credenciales inválidas".to_string()))?;
         
