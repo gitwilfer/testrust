@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use anyhow::{Result, anyhow};
 use futures::{stream, StreamExt};
-use sqlx::{Pool, Postgres};
+use sqlx::{Pool, Postgres, Row};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -72,17 +72,24 @@ impl BatchRepository {
         
         let query = query_builder.build();
         
-        // Corregimos el error de tipo incompatible en el resultado de fetch_all
-        // El tipo debe ser explícito y corresponder con lo que devuelve la consulta
+        // Corrección: usar try_get para acceder a los datos de PgRow
         let result = query.fetch_all(self.base.pool()).await;
-        let inserted_ids: Vec<(Uuid,)> = match result {
+        let inserted_ids: Vec<Uuid> = match result {
             Ok(rows) => {
                 // Convertir los resultados al tipo esperado
                 let mut ids = Vec::with_capacity(rows.len());
                 for row in rows {
-                    // Extraer el UUID de cada fila
-                    let id: Uuid = row.get(0);
-                    ids.push((id,));
+                    // Usar la implementación correcta de Row::try_get para Postgres
+                    match row.try_get::<Uuid, _>("idx_usuario") {
+                        Ok(id) => ids.push(id),
+                        Err(_) => {
+                            // Intentar con índice si el nombre de columna no funciona
+                            match row.try_get::<Uuid, _>(0) {
+                                Ok(id) => ids.push(id),
+                                Err(e) => return Err(anyhow!("Error al extraer UUID de la fila: {}", e)),
+                            }
+                        }
+                    }
                 }
                 ids
             },
@@ -95,7 +102,7 @@ impl BatchRepository {
             .collect();
             
         let results = inserted_ids.into_iter()
-            .filter_map(|(id,)| id_map.get(&id).cloned())
+            .filter_map(|id| id_map.get(&id).cloned())
             .collect();
             
         Ok(results)
