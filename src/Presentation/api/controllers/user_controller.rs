@@ -266,7 +266,10 @@ async fn delete_user(
     match user_controller.delete_user_use_case.execute(user_id).await {
         Ok(()) => {
             info!("Usuario eliminado con éxito: ID={}", user_id);
-            Ok(HttpResponse::NoContent().finish())
+            
+            // Para mantener el patrón consistente, devolvemos un ApiResponse
+            // con success: true pero data: None (porque el delete no devuelve datos)
+            Ok(HttpResponse::Ok().json(ApiResponse::<()>::success(None, Some("Usuario eliminado con éxito"))))
         },
         Err(app_error) => {
             error!("Error al eliminar usuario {}: {:?}", user_id, app_error);
