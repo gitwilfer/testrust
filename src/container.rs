@@ -51,7 +51,7 @@ impl AppState {
 
         // Casos de uso
         let login_use_case = Arc::new(LoginUseCase::new(
-            user_repository.clone(),
+            user_query_repository.clone(),
             auth_service.clone()
         ));
         
@@ -122,8 +122,10 @@ impl AppState {
         // 2. Capa de Aplicación (Casos de Uso)
         // Se inyectan las dependencias de infraestructura necesarias.
         let login_use_case = Arc::new(
-            LoginUseCase::new(user_repo.clone(), auth_service.clone())
-        );
+            LoginUseCase::new(
+                user_query_repository.clone(),
+                auth_service.clone()
+            ));
         
         // 3. Capa de Presentación (Controladores)
         // Se inyectan los casos de uso necesarios.
