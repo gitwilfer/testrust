@@ -62,6 +62,13 @@ impl AppState {
             user_query_repository.clone(),
             user_mapper.clone()
         ));
+
+        let update_user_use_case = Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
+            user_repository.clone(),       // Repositorio original para escritura
+            user_query_repository.clone(), // Repositorio de consulta (SQLx)
+            user_mapper.clone(),
+            auth_service.clone()
+        ));
         
         // Instanciar controladores
 
@@ -85,12 +92,14 @@ impl AppState {
                 user_repository.clone(),
                 user_mapper.clone()
             )),
+
             Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
-                user_query_repository.clone(),
+                ry_repository.clone(),
                 user_command_repository.clone(),
                 user_mapper.clone(),
                 auth_service.clone()
             )),
+            
             Arc::new(crate::Application::use_cases::user::delete::DeleteUserUseCase::new(
                 user_repository.clone()
             ))
@@ -121,6 +130,13 @@ impl AppState {
                 .context("Failed to create UserQueryRepositoryImpl")?
         );
         
+        let update_user_use_case = Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
+            user_repo.clone(),             // Repositorio original para escritura
+            user_query_repository.clone(), // Repositorio de consulta
+            user_mapper.clone(),
+            auth_service.clone()
+        ));
+
         // Crear explícitamente el repositorio de comandos
         let user_command_repository = Arc::new(
             UserCommandRepositoryImpl::new()
@@ -143,6 +159,13 @@ impl AppState {
             )
         );
         
+        let update_user_use_case = Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
+            user_repository.clone(),       // Repositorio original para escritura
+            user_query_repository.clone(), // Repositorio de consulta (SQLx)
+            user_mapper.clone(),
+            auth_service.clone()
+        ));
+        
         // Crear un controlador de usuario para la implementación básica
         let user_controller = UserController::new(
             Arc::new(crate::Application::use_cases::user::create::CreateUserUseCase::new(
@@ -162,6 +185,7 @@ impl AppState {
                 user_repo.clone(),
                 user_mapper.clone()
             )),
+
             Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
                 user_query_repository.clone(),
                 user_command_repository.clone(),

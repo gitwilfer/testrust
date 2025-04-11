@@ -2,8 +2,7 @@ use crate::Application::dtos::update_user_dto::UpdateUserDto;
 use crate::Application::dtos::user_dto::UserResponseDto;
 use crate::Application::errors::application_error::ApplicationError;
 use crate::Application::mappers::user_mapper::UserMapper;
-use crate::Application::ports::repositories::UserQueryRepository;
-use crate::Application::ports::repositories::UserCommandRepository;
+use crate::Application::ports::repositories::{UserRepositoryPort, UserQueryRepository};
 use crate::Application::ports::repositories::AuthServicePort;
 use crate::Application::validators::user_validator::UserValidator;
 use chrono::Utc;
@@ -12,22 +11,22 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 pub struct UpdateUserUseCase {
+    pub user_repository: Arc<dyn UserRepositoryPort>,
     pub user_query_repository: Arc<dyn UserQueryRepository>,
-    pub user_command_repository: Arc<dyn UserCommandRepository>,
     pub user_mapper: Arc<UserMapper>,
     pub auth_service: Arc<dyn AuthServicePort>,
 }
 
 impl UpdateUserUseCase {
     pub fn new(
+        user_repository: Arc<dyn UserRepositoryPort>,
         user_query_repository: Arc<dyn UserQueryRepository>,
-        user_command_repository: Arc<dyn UserCommandRepository>,
         user_mapper: Arc<UserMapper>,
         auth_service: Arc<dyn AuthServicePort>,
     ) -> Self {
         UpdateUserUseCase {
+            user_repository,
             user_query_repository,
-            user_command_repository,
             user_mapper,
             auth_service,
         }
@@ -39,14 +38,18 @@ impl UpdateUserUseCase {
             return Err(ApplicationError::ValidationError(e.to_string()));
         }
         
-        // 2. Verificar que el usuario existe (usando el repositorio de consulta)
-        let mut user = self.user_query_repository
+        // 2. Verificar que el usuario existe usando CQRS (repositorio de consulta)
+        let user_exists = self.user_query_repository
             .find_by_id(id)
             .await
-            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
-            .ok_or_else(|| ApplicationError::NotFound(format!("Usuario con ID {} no encontrado", id)))?;
+            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?;
+            
+        let mut user = match user_exists {
+            Some(user) => user,
+            None => return Err(ApplicationError::NotFound(format!("Usuario con ID {} no encontrado", id))),
+        };
         
-        // 3. Validar email único si se está actualizando
+        // 3. Validar email único si se está actualizando usando CQRS
         if let Some(email) = &update_dto.email {
             if let Some(existing_user) = self.user_query_repository.find_by_email(email).await
                 .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario por email: {}", e)))?
@@ -71,8 +74,8 @@ impl UpdateUserUseCase {
         user.modified_by = modified_by;
         user.modified_at = Some(Utc::now().naive_utc());
         
-        // 7. Guardar en repositorio (solo una operación de UPDATE)
-        let updated_user = self.user_command_repository
+        // 7. Guardar en repositorio (SOLO UNA OPERACIÓN DE UPDATE)
+        let updated_user = self.user_repository
             .update(user)
             .await
             .map_err(|e| ApplicationError::InfrastructureError(format!("Error al actualizar el usuario: {}", e)))?;
