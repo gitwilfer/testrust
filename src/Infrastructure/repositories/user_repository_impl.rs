@@ -113,6 +113,7 @@ impl UserRepositoryImpl {
     }
     
     // Función genérica para ejecutar operaciones en transacción
+    // La clave está aquí: se debe asegurar que el tipo de retorno sea consistente
     async fn execute_db_transaction<F, T>(&self, operation: F) -> Result<T>
     where
         F: FnOnce(&mut PgConnection) -> Result<T> + Send + 'static,
@@ -142,6 +143,7 @@ impl UserRepositoryImpl {
             anyhow!("Error de base de datos: {}", e)
         })?;
         
+        // Aquí está la corrección: asegurarse de devolver el tipo correcto
         Ok(result)
     }
 }
@@ -159,7 +161,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
     
     async fn find_by_id(&self, id: Uuid) -> Result<Option<User>> {
         debug!("Iniciando búsqueda de usuario por ID: {}", id);
-        let id_clone = id.clone();
+        let id_clone = id;
         
         self.execute_db_transaction(move |conn| {
             Self::sync_find_by_id(id_clone, conn)
@@ -195,7 +197,7 @@ impl UserRepositoryPort for UserRepositoryImpl {
     
     async fn delete(&self, id: Uuid) -> Result<()> {
         debug!("Iniciando eliminación de usuario: {}", id);
-        let id_clone = id.clone();
+        let id_clone = id;
         
         self.execute_db_transaction(move |conn| {
             Self::sync_delete(id_clone, conn)
