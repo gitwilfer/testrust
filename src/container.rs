@@ -4,7 +4,7 @@ use anyhow::{Result, Context};
 
 // Importaciones de implementaciones concretas y controladores
 // Usamos 'crate::' para referirnos a los módulos definidos en src/lib.rs
-use crate::Infrastructure::repositories::{UserRepositoryImpl, UserQueryRepositorySqlx};
+use crate::Infrastructure::repositories::{UserRepositoryImpl, UserQueryRepositoryImpl,UserQueryRepositorySqlx};
 use crate::Infrastructure::auth::AuthServiceImpl;
 use crate::Infrastructure::Persistence::database;
 use crate::Infrastructure::Persistence::sqlx_database;
