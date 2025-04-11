@@ -12,7 +12,7 @@ diesel::table! {
         fecha_creacion -> Timestamp,
         modificado_por -> Nullable<Uuid>,  // Cambiado de Text a Uuid
         fecha_modificacion -> Nullable<Timestamp>,
-        status -> Int2,
+        estado -> Int2,
     }
 }
 

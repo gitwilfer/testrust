@@ -147,7 +147,7 @@ impl UserCachedRepository {
                 apellido as last_name,
                 correo_electronico as email, 
                 contraseña as password,
-                status,
+                estado as status,
                 creado_por as created_by,
                 fecha_creacion as created_at,
                 modificado_por as modified_by,
@@ -204,7 +204,7 @@ impl UserCachedRepository {
                 apellido = $3,
                 correo_electronico = $4,
                 contraseña = $5,
-                status = $6,
+                estado = $6,
                 modificado_por = $7,
                 fecha_modificacion = $8
             WHERE idx_usuario = $9
