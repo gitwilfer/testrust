@@ -1,5 +1,3 @@
-// Este módulo contiene el controlador para el recurso de usuario.
-// Define los handlers para las rutas de usuario.
 use actix_web::{web, HttpResponse, post, get, put, delete, Error};
 use crate::Application::use_cases::{
     CreateUserUseCase, 
@@ -13,13 +11,14 @@ use crate::Application::dtos::create_user_dto::CreateUserDto;
 use crate::Application::dtos::update_user_dto::UpdateUserDto;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::Presentation::api::middleware::map_error;
+use log::{info, error};
+use crate::Presentation::api::adapters::ErrorAdapter;
 use crate::Presentation::api::validators::validate_json;
 use crate::Presentation::api::responses::ApiResponse;
 use crate::Presentation::api::models::request::{CreateUserRequest, UpdateUserRequest};
 use crate::Presentation::api::models::response::UserResponse;
 
-// Controlador para crear usuarios
+// Controlador para usuarios
 pub struct UserController {
     pub create_user_use_case: Arc<dyn CreateUserUseCase>,
     pub find_user_by_id_use_case: Arc<dyn FindUserByIdUseCase>,
@@ -55,7 +54,10 @@ async fn create_user(
     user_controller: web::Data<UserController>,
     user_req: web::Json<CreateUserRequest>,
 ) -> Result<HttpResponse, Error> {
+    // Validar request
     validate_json(&user_req)?;
+
+    info!("Creando nuevo usuario: {}", user_req.username);
 
     // Mapeo explícito de CreateUserRequest a CreateUserDto
     let user_dto = CreateUserDto {
@@ -66,13 +68,11 @@ async fn create_user(
         password: user_req.password.clone(),
     };
     
-    let result = user_controller
-        .create_user_use_case
-        .execute(user_dto)
-        .await;
-
-    match result {
+    // Ejecutar caso de uso
+    match user_controller.create_user_use_case.execute(user_dto).await {
         Ok(user_dto) => {
+            info!("Usuario creado con éxito: ID={}", user_dto.id);
+            
             // Mapeo explícito de UserResponseDto a UserResponse
             let user_response = UserResponse {
                 id: user_dto.id,
@@ -89,26 +89,26 @@ async fn create_user(
             
             Ok(HttpResponse::Created().json(ApiResponse::success(Some(user_response), None)))
         },
-        // Aquí es donde aplicamos el cambio
         Err(app_error) => {
-            // Convertimos ApplicationError directamente en HttpResponse usando el adaptador
-            Ok(crate::Presentation::api::adapters::ErrorAdapter::map_application_error(app_error))
+            error!("Error al crear usuario: {:?}", app_error);
+            Ok(ErrorAdapter::map_application_error(app_error))
         },
     }
 }
+
 // Handler para la ruta GET /api/users/{id}
 #[get("/{id}")]
 async fn find_user_by_id(
     user_controller: web::Data<UserController>,
     id: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
-    let result = user_controller
-        .find_user_by_id_use_case
-        .execute(id.into_inner())
-        .await;
-
-    match result {
+    let user_id = id.into_inner();
+    info!("Buscando usuario por ID: {}", user_id);
+    
+    match user_controller.find_user_by_id_use_case.execute(user_id).await {
         Ok(user_dto) => {
+            info!("Usuario encontrado: ID={}", user_dto.id);
+            
             // Mapeo explícito de UserResponseDto a UserResponse
             let user_response = UserResponse {
                 id: user_dto.id,
@@ -125,7 +125,10 @@ async fn find_user_by_id(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e.into())),
+        Err(app_error) => {
+            error!("Error al buscar usuario por ID {}: {:?}", user_id, app_error);
+            Ok(ErrorAdapter::map_application_error(app_error))
+        },
     }
 }
 
@@ -135,13 +138,13 @@ async fn find_user_by_username(
     user_controller: web::Data<UserController>,
     username: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
-    let result = user_controller
-        .find_user_by_username_use_case
-        .execute(&username.into_inner())
-        .await;
-
-    match result {
+    let username_value = username.into_inner();
+    info!("Buscando usuario por username: {}", username_value);
+    
+    match user_controller.find_user_by_username_use_case.execute(&username_value).await {
         Ok(user_dto) => {
+            info!("Usuario encontrado por username {}: ID={}", username_value, user_dto.id);
+            
             // Mapeo explícito de UserResponseDto a UserResponse
             let user_response = UserResponse {
                 id: user_dto.id,
@@ -158,7 +161,10 @@ async fn find_user_by_username(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e.into())),
+        Err(app_error) => {
+            error!("Error al buscar usuario por username {}: {:?}", username_value, app_error);
+            Ok(ErrorAdapter::map_application_error(app_error))
+        },
     }
 }
 
@@ -167,13 +173,12 @@ async fn find_user_by_username(
 async fn find_all_users(
     user_controller: web::Data<UserController>,
 ) -> Result<HttpResponse, Error> {
-    let result = user_controller
-        .find_all_users_use_case
-        .execute()
-        .await;
-
-    match result {
+    info!("Obteniendo todos los usuarios");
+    
+    match user_controller.find_all_users_use_case.execute().await {
         Ok(user_dtos) => {
+            info!("Se encontraron {} usuarios", user_dtos.len());
+            
             // Mapeo explícito de cada UserResponseDto a UserResponse
             let user_responses: Vec<UserResponse> = user_dtos
                 .into_iter()
@@ -193,7 +198,10 @@ async fn find_all_users(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_responses), None)))
         },
-        Err(e) => Err(map_error(e.into())),
+        Err(app_error) => {
+            error!("Error al obtener todos los usuarios: {:?}", app_error);
+            Ok(ErrorAdapter::map_application_error(app_error))
+        },
     }
 }
 
@@ -204,7 +212,11 @@ async fn update_user(
     id: web::Path<Uuid>,
     user_req: web::Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, Error> {
+    // Validar request
     validate_json(&user_req)?;
+    
+    let user_id = id.into_inner();
+    info!("Actualizando usuario con ID: {}", user_id);
     
     // Mapeo explícito de UpdateUserRequest a UpdateUserDto
     let update_dto = UpdateUserDto {
@@ -214,13 +226,11 @@ async fn update_user(
         password: user_req.password.clone(),
     };
     
-    let result = user_controller
-        .update_user_use_case
-        .execute(id.into_inner(), update_dto, None)
-        .await;
-
-    match result {
+    // Ejecutar caso de uso
+    match user_controller.update_user_use_case.execute(user_id, update_dto, None).await {
         Ok(user_dto) => {
+            info!("Usuario actualizado con éxito: ID={}", user_dto.id);
+            
             // Mapeo explícito de UserResponseDto a UserResponse
             let user_response = UserResponse {
                 id: user_dto.id,
@@ -237,7 +247,10 @@ async fn update_user(
             
             Ok(HttpResponse::Ok().json(ApiResponse::success(Some(user_response), None)))
         },
-        Err(e) => Err(map_error(e.into())),
+        Err(app_error) => {
+            error!("Error al actualizar usuario {}: {:?}", user_id, app_error);
+            Ok(ErrorAdapter::map_application_error(app_error))
+        },
     }
 }
 
@@ -247,14 +260,18 @@ async fn delete_user(
     user_controller: web::Data<UserController>,
     id: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
-    let result = user_controller
-        .delete_user_use_case
-        .execute(id.into_inner())
-        .await;
-
-    match result {
-        Ok(()) => Ok(HttpResponse::NoContent().finish()),
-        Err(e) => Err(map_error(e.into())),
+    let user_id = id.into_inner();
+    info!("Eliminando usuario con ID: {}", user_id);
+    
+    match user_controller.delete_user_use_case.execute(user_id).await {
+        Ok(()) => {
+            info!("Usuario eliminado con éxito: ID={}", user_id);
+            Ok(HttpResponse::NoContent().finish())
+        },
+        Err(app_error) => {
+            error!("Error al eliminar usuario {}: {:?}", user_id, app_error);
+            Ok(ErrorAdapter::map_application_error(app_error))
+        },
     }
 }
 
