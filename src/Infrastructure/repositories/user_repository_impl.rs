@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use anyhow::{Result, anyhow, Context};
+use anyhow::{Result, anyhow};
 use std::sync::Arc;
 use uuid::Uuid;
 use diesel::prelude::*;
@@ -8,7 +8,7 @@ use actix_web::web;
 use log::{error, debug};
 
 use crate::Application::ports::repositories::UserRepositoryPort;
-use crate::Application::services::{get_database_for_entity, get_default_database};
+use crate::Application::services::get_database_for_entity;
 use crate::Domain::entities::user::User;
 use crate::Infrastructure::Persistence::database::{self, DbConnection};
 use crate::Infrastructure::Persistence::models::user_model::UserModel;
@@ -113,36 +113,27 @@ impl UserRepositoryImpl {
     }
     
     // Función genérica para ejecutar operaciones en transacción
+    // Siguiendo la documentación oficial de actix-web para web::block
     async fn execute_db_transaction<F, T>(&self, operation: F) -> Result<T>
     where
         F: FnOnce(&mut PgConnection) -> Result<T> + Send + 'static,
         T: Send + 'static,
     {
-        // Obtener pool de conexiones
         let pool = self.pool.clone();
         
-        // Ejecutar operación en un hilo separado para no bloquear
-        match web::block(move || {
+        // Según la documentación oficial, web::block devuelve un Result<Result<T, E>, BlockingError>
+        // Por lo tanto necesitamos usar ?? para desempaquetar ambos Result
+        let result = web::block(move || {
             let mut conn = pool.get()?;
-            
-            // Ejecutar la operación dentro de una transacción
-            conn.transaction(|conn| {
-                match operation(conn) {
-                    Ok(value) => Ok(value),
-                    Err(e) => {
-                        error!("Error durante la transacción: {:?}", e);
-                        Err(e)
-                    }
-                }
-            })
+            conn.transaction(|conn| operation(conn))
         })
-        .await {
-            Ok(result) => Ok(result),
-            Err(e) => {
-                error!("Error al ejecutar transacción: {:?}", e);
-                Err(anyhow!("Error de base de datos: {}", e))
-            }
-        }
+        .await
+        .map_err(|e| {
+            error!("Error al ejecutar operación bloqueante: {:?}", e);
+            anyhow!("Error de base de datos: {}", e)
+        })??;
+        
+        Ok(result)
     }
 }
 
