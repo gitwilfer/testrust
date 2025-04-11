@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, Context}; // <--- Añadido Context
 use std::sync::Arc;
 use uuid::Uuid;
 use diesel::prelude::*;
@@ -7,6 +7,9 @@ use diesel::r2d2::{ConnectionManager, Pool};
 use tokio::task;
 use std::future::Future;
 use std::pin::Pin;
+use actix_web::web;
+use actix_web::error::BlockingError; // <--- Importar BlockingError directamente
+use diesel::result::Error as DieselError; // <--- Alias para diesel::result::Error
 
 use crate::Application::ports::repositories::UserRepositoryPort;
 use crate::Application::services::{get_database_for_entity, get_default_database};
@@ -127,23 +130,81 @@ impl UserRepositoryImpl {
 // Implementamos TransactionalOperations para ejecutar funciones en una transacción
 #[async_trait]
 impl TransactionalOperations for UserRepositoryImpl {
-    async fn execute_in_transaction<F, R>(&self, f: F) -> Result<R>
+    async fn execute_in_transaction<F, R>(&self, f: F) -> Result<R> // Devuelve anyhow::Result<R>
     where
+        // F devuelve anyhow::Result<R>
         F: FnOnce(&mut PgConnection) -> Result<R> + Send + 'static,
         R: Send + 'static,
     {
-        let mut conn = self.get_connection().await?;
-        
-        // Ejecutamos la transacción en un contexto bloqueante
-        task::block_in_place(move || {
-            // Aquí está el cambio: adaptamos la función f para que tome &mut PooledConnection
+        // Asegúrate de tener estos 'use' en scope:
+        // use actix_web::web;
+        // use actix_web::error::BlockingError;
+        // use diesel::{Connection, PgConnection};
+        // use diesel::result::Error as DieselError;
+        // use crate::error::Result; // Tu tipo anyhow::Result
+        // use anyhow::Context;
+        // use log;
+
+        // Obtenemos una conexión del pool
+        let mut conn = self.get_connection().await
+            .context("Failed to get database connection from pool")?;
+
+        // Ejecutamos la operación bloqueante
+        // La closure interna devuelve Result<R, DieselError>
+        // web::block(...).await devuelve Result<R, BlockingError<DieselError>>
+        let block_result: Result<R, BlockingError<DieselError>> = web::block(move || {
             conn.transaction(|pooled_conn| {
-                // Obtenemos la referencia a PgConnection dentro de PooledConnection
-                let pg_conn: &mut PgConnection = pooled_conn;
-                // Y ahora pasamos esa referencia a nuestra función original
-                f(pg_conn)
-            })
+                // Llamamos a f, que devuelve anyhow::Result<R>
+                match f(pooled_conn) {
+                    Ok(value) => {
+                        // Si f tuvo éxito, la transacción devuelve Ok(value)
+                        Ok(value) // Tipo: Result<R, DieselError>
+                    }
+                    Err(anyhow_error) => {
+                        // Si f falló, logueamos y forzamos rollback
+                        log::error!("Error within transaction closure (forcing rollback): {:?}", anyhow_error);
+                        // Devolvemos un error que Diesel entienda para rollback
+                        Err(DieselError::RollbackTransaction) // Tipo: Result<R, DieselError>
+                    }
+                }
+            }) // El resultado de transaction es Result<R, DieselError>
         })
+        .await;
+
+        // Manejamos el resultado de web::block y convertimos a anyhow::Result<R>
+        match block_result {
+            Ok(value) => {
+                // La transacción y web::block tuvieron éxito
+                Ok(value) // Devolvemos anyhow::Result<R>
+            }
+            Err(blocking_error) => { // Tipo: BlockingError<DieselError>
+                // web::block falló o la transacción interna falló
+                match blocking_error {
+                    BlockingError::Error(diesel_error) => { // Tipo: DieselError
+                        // La transacción interna falló.
+                        match diesel_error {
+                            DieselError::RollbackTransaction => {
+                                // Este error lo pusimos nosotros porque f() falló.
+                                log::warn!("Transaction rolled back due to internal error (see previous log).");
+                                // Devolvemos un error genérico, ya que perdimos el original.
+                                Err(anyhow::anyhow!("Transaction failed due to internal operation error"))
+                            }
+                            other_diesel_error => {
+                                // Otro error inesperado de Diesel.
+                                log::error!("Database transaction failed with unexpected Diesel error: {:?}", other_diesel_error);
+                                Err(anyhow::Error::from(other_diesel_error)
+                                    .context("Database transaction failed unexpectedly"))
+                            }
+                        }
+                    }
+                    BlockingError::Canceled => { // Variante Canceled
+                        // web::block fue cancelado.
+                        log::error!("Blocking database operation was canceled");
+                        Err(anyhow::anyhow!("Blocking database operation was canceled"))
+                    }
+                }
+            }
+        }
     }
 }
 
