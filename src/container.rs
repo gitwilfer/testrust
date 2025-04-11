@@ -1,7 +1,6 @@
 use actix_web::web;
 use std::sync::Arc;
 use anyhow::{Result, Context};
-use sqlx::postgres::PgPoolOptions; // Usamos anyhow para un manejo de errores más sencillo
 
 // Importaciones de implementaciones concretas y controladores
 // Usamos 'crate::' para referirnos a los módulos definidos en src/lib.rs
@@ -12,7 +11,7 @@ use crate::Infrastructure::Persistence::sqlx_database;
 use crate::Application::use_cases::user::login::LoginUseCase;
 use crate::Application::use_cases::user::find_by_username_optimized::FindUserByUsernameOptimizedUseCase;
 use crate::Presentation::api::controllers::{AuthController, UserController};
-use crate::Application::mappers::UserMapper;       // Corregir capitalización
+use crate::Application::mappers::UserMapper;
 use crate::Infrastructure::monitoring::database_health_monitor::DatabaseHealthMonitor;
 use crate::Presentation::api::controllers::health_controller::HealthController;
 
@@ -66,6 +65,7 @@ impl AppState {
 
         // NUEVO: Crear health controller
         let health_controller = HealthController::new(db_monitor);
+        let health_controller_data = web::Data::new(health_controller);
 
         let auth_controller = AuthController::new(login_use_case);
         let user_controller = UserController::new(
@@ -124,18 +124,49 @@ impl AppState {
         let login_use_case = Arc::new(
             LoginUseCase::new(user_repo.clone(), auth_service.clone())
         );
-        // Aquí instanciarías otros casos de uso...
-        // let create_user_use_case = Arc::new(CreateUserUseCase::new(user_repo.clone(), ...));
-
+        
         // 3. Capa de Presentación (Controladores)
         // Se inyectan los casos de uso necesarios.
         let auth_controller = AuthController::new(login_use_case);
-        // Aquí instanciarías otros controladores...
-        // let user_controller = UserController::new(create_user_use_case, ...);
+        
+        // Crear un controlador de usuario vacío para la implementación básica
+        let user_controller = UserController::new(
+            Arc::new(crate::Application::use_cases::user::create::CreateUserUseCase::new(
+                user_repo.clone(),
+                auth_service.clone(),
+                Arc::new(UserMapper::new())
+            )),
+            Arc::new(crate::Application::use_cases::user::find_by_id::FindUserByIdUseCase::new(
+                user_repo.clone(),
+                Arc::new(UserMapper::new())
+            )),
+            Arc::new(crate::Application::use_cases::user::find_by_username::FindUserByUsernameUseCase::new(
+                user_repo.clone(),
+                Arc::new(UserMapper::new())
+            )),
+            Arc::new(crate::Application::use_cases::user::find_all::FindAllUsersUseCase::new(
+                user_repo.clone(),
+                Arc::new(UserMapper::new())
+            )),
+            Arc::new(crate::Application::use_cases::user::update::UpdateUserUseCase::new(
+                user_repo.clone(),
+                Arc::new(UserMapper::new()),
+                auth_service.clone()
+            )),
+            Arc::new(crate::Application::use_cases::user::delete::DeleteUserUseCase::new(
+                user_repo.clone()
+            ))
+        );
+
+        // Crear un monitor de salud básico
+        let db_monitor = Arc::new(DatabaseHealthMonitor::new(60));
+        db_monitor.start_monitoring();
+        let health_controller = HealthController::new(db_monitor);
 
         // 4. Envolver controladores en web::Data para compartirlos
         let auth_controller_data = web::Data::new(auth_controller);
-        // let user_controller_data = web::Data::new(user_controller);
+        let user_controller_data = web::Data::new(user_controller);
+        let health_controller_data = web::Data::new(health_controller);
 
         // 5. Construir y devolver el AppState
         Ok(AppState {

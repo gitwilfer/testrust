@@ -71,8 +71,24 @@ impl BatchRepository {
         query_builder.push(" RETURNING idx_usuario");
         
         let query = query_builder.build();
-        let inserted_ids: Vec<(Uuid,)> = query.fetch_all(self.base.pool()).await?;
         
+        // Corregimos el error de tipo incompatible en el resultado de fetch_all
+        // El tipo debe ser explícito y corresponder con lo que devuelve la consulta
+        let result = query.fetch_all(self.base.pool()).await;
+        let inserted_ids: Vec<(Uuid,)> = match result {
+            Ok(rows) => {
+                // Convertir los resultados al tipo esperado
+                let mut ids = Vec::with_capacity(rows.len());
+                for row in rows {
+                    // Extraer el UUID de cada fila
+                    let id: Uuid = row.get(0);
+                    ids.push((id,));
+                }
+                ids
+            },
+            Err(e) => return Err(anyhow!("Error al insertar usuarios en lote: {}", e)),
+        };
+            
         // Mapear los IDs insertados de vuelta a los usuarios originales
         let id_map: std::collections::HashMap<Uuid, User> = users.into_iter()
             .map(|user| (user.id, user))
