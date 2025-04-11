@@ -7,7 +7,7 @@ diesel::table! {
         nombre -> Text,
         apellido -> Text,
         correo_electronico -> Text,
-        password_hash -> Text,
+        contraseña -> Text,
         creado_por -> Nullable<Uuid>,  // Cambiado de Text a Uuid
         fecha_creacion -> Timestamp,
         modificado_por -> Nullable<Uuid>,  // Cambiado de Text a Uuid

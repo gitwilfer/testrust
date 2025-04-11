@@ -22,7 +22,7 @@ pub struct UserModel {
     #[diesel(column_name = correo_electronico)]
     pub email: String,
     
-    #[diesel(column_name = password_hash)]
+    #[diesel(column_name = contraseña)]
     pub password: String,
     
     #[diesel(column_name = creado_por)]

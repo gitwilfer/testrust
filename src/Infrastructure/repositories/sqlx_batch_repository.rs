@@ -51,7 +51,7 @@ impl BatchRepository {
     // Insertar un lote de usuarios
     async fn insert_user_batch(&self, users: Vec<User>) -> Result<Vec<User>> {
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO usuarios (idx_usuario, usuario, nombre, apellido, correo_electronico, password_hash, status, creado_por, fecha_creacion, modificado_por, fecha_modificacion) "
+            "INSERT INTO usuarios (idx_usuario, usuario, nombre, apellido, correo_electronico, contraseña, status, creado_por, fecha_creacion, modificado_por, fecha_modificacion) "
         );
         
         query_builder.push_values(users.iter(), |mut b, user| {
@@ -127,7 +127,7 @@ impl BatchRepository {
                             nombre = $2, 
                             apellido = $3, 
                             correo_electronico = $4,
-                            password_hash = $5,
+                            contraseña = $5,
                             status = $6,
                             modificado_por = $7,
                             fecha_modificacion = $8
