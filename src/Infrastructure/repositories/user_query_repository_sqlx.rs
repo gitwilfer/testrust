@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use sqlx::{Pool, Postgres};
+use sqlx::{Pool, Postgres, Row};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -40,154 +40,187 @@ impl UserQueryRepository for UserQueryRepositorySqlx {
     }
     
     async fn find_by_id(&self, id: Uuid) -> Result<Option<User>> {
-        // Usar la macro query_as! de SQLx para mapeo de tipos con seguridad
-        let record = sqlx::query!(
-            r#"
+        // Reemplazar query! por query_as string para evitar la verificación estática
+        let sql = r#"
             SELECT 
-                idx_usuario as "id: Uuid",
-                usuario as "username", 
-                nombre as "first_name", 
-                apellido as "last_name",
-                correo_electronico as "email", 
-                password_hash as "password",
-                status as "status: i16",
-                creado_por as "created_by: Option<Uuid>",
-                fecha_creacion as "created_at: NaiveDateTime",
-                modificado_por as "modified_by: Option<Uuid>",
-                fecha_modificacion as "modified_at: Option<NaiveDateTime>"
+                idx_usuario as id,
+                usuario as username, 
+                nombre as first_name, 
+                apellido as last_name,
+                correo_electronico as email, 
+                password_hash as password,
+                status,
+                creado_por as created_by,
+                fecha_creacion as created_at,
+                modificado_por as modified_by,
+                fecha_modificacion as modified_at
             FROM usuarios 
             WHERE idx_usuario = $1
-            "#,
-            id
-        )
-        .fetch_optional(self.base.pool())
-        .await?;
+        "#;
         
-        // Convertir a entidad de dominio si hay resultado
-        Ok(record.map(|r| User {
-            id: r.id,
-            username: r.username,
-            first_name: r.first_name,
-            last_name: r.last_name,
-            email: r.email,
-            password: r.password,
-            status: r.status,
-            created_by: r.created_by,
-            created_at: r.created_at,
-            modified_by: r.modified_by,
-            modified_at: r.modified_at,
-        }))
+        let result = sqlx::query(sql)
+            .bind(id)
+            .fetch_optional(self.base.pool())
+            .await;
+            
+        match result {
+            Ok(Some(row)) => {
+                // Mapeo manual de filas a entidad
+                let user = User {
+                    id: row.try_get("id")?,
+                    username: row.try_get("username")?,
+                    first_name: row.try_get("first_name")?,
+                    last_name: row.try_get("last_name")?,
+                    email: row.try_get("email")?,
+                    password: row.try_get("password")?,
+                    status: row.try_get("status")?,
+                    created_by: row.try_get("created_by")?,
+                    created_at: row.try_get("created_at")?,
+                    modified_by: row.try_get("modified_by")?,
+                    modified_at: row.try_get("modified_at")?,
+                };
+                Ok(Some(user))
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(anyhow!("Error al buscar usuario por ID: {}", e)),
+        }
     }
     
     async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
-        let record = sqlx::query!(
-            r#"
+        let sql = r#"
             SELECT 
-                idx_usuario as "id: Uuid",
-                usuario as "username", 
-                nombre as "first_name", 
-                apellido as "last_name",
-                correo_electronico as "email", 
-                password_hash as "password",
-                status as "status: i16",
-                creado_por as "created_by: Option<Uuid>",
-                fecha_creacion as "created_at: NaiveDateTime",
-                modificado_por as "modified_by: Option<Uuid>",
-                fecha_modificacion as "modified_at: Option<NaiveDateTime>"
+                idx_usuario as id,
+                usuario as username, 
+                nombre as first_name, 
+                apellido as last_name,
+                correo_electronico as email, 
+                password_hash as password,
+                status,
+                creado_por as created_by,
+                fecha_creacion as created_at,
+                modificado_por as modified_by,
+                fecha_modificacion as modified_at
             FROM usuarios 
             WHERE correo_electronico = $1
-            "#,
-            email
-        )
-        .fetch_optional(self.base.pool())
-        .await?;
+        "#;
         
-        Ok(record.map(|r| User {
-            id: r.id,
-            username: r.username,
-            first_name: r.first_name,
-            last_name: r.last_name,
-            email: r.email,
-            password: r.password,
-            status: r.status,
-            created_by: r.created_by,
-            created_at: r.created_at,
-            modified_by: r.modified_by,
-            modified_at: r.modified_at,
-        }))
+        let result = sqlx::query(sql)
+            .bind(email)
+            .fetch_optional(self.base.pool())
+            .await;
+            
+        match result {
+            Ok(Some(row)) => {
+                // Mapeo manual de filas a entidad
+                let user = User {
+                    id: row.try_get("id")?,
+                    username: row.try_get("username")?,
+                    first_name: row.try_get("first_name")?,
+                    last_name: row.try_get("last_name")?,
+                    email: row.try_get("email")?,
+                    password: row.try_get("password")?,
+                    status: row.try_get("status")?,
+                    created_by: row.try_get("created_by")?,
+                    created_at: row.try_get("created_at")?,
+                    modified_by: row.try_get("modified_by")?,
+                    modified_at: row.try_get("modified_at")?,
+                };
+                Ok(Some(user))
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(anyhow!("Error al buscar usuario por email: {}", e)),
+        }
     }
     
     async fn find_by_username(&self, username: &str) -> Result<Option<User>> {
-        let record = sqlx::query!(
-            r#"
+        let sql = r#"
             SELECT 
-                idx_usuario as "id: Uuid",
-                usuario as "username", 
-                nombre as "first_name", 
-                apellido as "last_name",
-                correo_electronico as "email", 
-                password_hash as "password",
-                status as "status: i16",
-                creado_por as "created_by: Option<Uuid>",
-                fecha_creacion as "created_at: NaiveDateTime",
-                modificado_por as "modified_by: Option<Uuid>",
-                fecha_modificacion as "modified_at: Option<NaiveDateTime>"
+                idx_usuario as id,
+                usuario as username, 
+                nombre as first_name, 
+                apellido as last_name,
+                correo_electronico as email, 
+                password_hash as password,
+                status,
+                creado_por as created_by,
+                fecha_creacion as created_at,
+                modificado_por as modified_by,
+                fecha_modificacion as modified_at
             FROM usuarios 
             WHERE usuario = $1
-            "#,
-            username
-        )
-        .fetch_optional(self.base.pool())
-        .await?;
+        "#;
         
-        Ok(record.map(|r| User {
-            id: r.id,
-            username: r.username,
-            first_name: r.first_name,
-            last_name: r.last_name,
-            email: r.email,
-            password: r.password,
-            status: r.status,
-            created_by: r.created_by,
-            created_at: r.created_at,
-            modified_by: r.modified_by,
-            modified_at: r.modified_at,
-        }))
+        let result = sqlx::query(sql)
+            .bind(username)
+            .fetch_optional(self.base.pool())
+            .await;
+            
+        match result {
+            Ok(Some(row)) => {
+                // Mapeo manual de filas a entidad
+                let user = User {
+                    id: row.try_get("id")?,
+                    username: row.try_get("username")?,
+                    first_name: row.try_get("first_name")?,
+                    last_name: row.try_get("last_name")?,
+                    email: row.try_get("email")?,
+                    password: row.try_get("password")?,
+                    status: row.try_get("status")?,
+                    created_by: row.try_get("created_by")?,
+                    created_at: row.try_get("created_at")?,
+                    modified_by: row.try_get("modified_by")?,
+                    modified_at: row.try_get("modified_at")?,
+                };
+                Ok(Some(user))
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(anyhow!("Error al buscar usuario por username: {}", e)),
+        }
     }
     
     async fn find_all(&self) -> Result<Vec<User>> {
-        let records = sqlx::query!(
-            r#"
+        let sql = r#"
             SELECT 
-                idx_usuario as "id: Uuid",
-                usuario as "username", 
-                nombre as "first_name", 
-                apellido as "last_name",
-                correo_electronico as "email", 
-                password_hash as "password",
-                status as "status: i16",
-                creado_por as "created_by: Option<Uuid>",
-                fecha_creacion as "created_at: NaiveDateTime",
-                modificado_por as "modified_by: Option<Uuid>",
-                fecha_modificacion as "modified_at: Option<NaiveDateTime>"
+                idx_usuario as id,
+                usuario as username, 
+                nombre as first_name, 
+                apellido as last_name,
+                correo_electronico as email, 
+                password_hash as password,
+                status,
+                creado_por as created_by,
+                fecha_creacion as created_at,
+                modificado_por as modified_by,
+                fecha_modificacion as modified_at
             FROM usuarios
-            "#
-        )
-        .fetch_all(self.base.pool())
-        .await?;
+        "#;
         
-        Ok(records.into_iter().map(|r| User {
-            id: r.id,
-            username: r.username,
-            first_name: r.first_name,
-            last_name: r.last_name,
-            email: r.email,
-            password: r.password,
-            status: r.status,
-            created_by: r.created_by,
-            created_at: r.created_at,
-            modified_by: r.modified_by,
-            modified_at: r.modified_at,
-        }).collect())
+        let result = sqlx::query(sql)
+            .fetch_all(self.base.pool())
+            .await;
+            
+        match result {
+            Ok(rows) => {
+                let mut users = Vec::with_capacity(rows.len());
+                for row in rows {
+                    let user = User {
+                        id: row.try_get("id")?,
+                        username: row.try_get("username")?,
+                        first_name: row.try_get("first_name")?,
+                        last_name: row.try_get("last_name")?,
+                        email: row.try_get("email")?,
+                        password: row.try_get("password")?,
+                        status: row.try_get("status")?,
+                        created_by: row.try_get("created_by")?,
+                        created_at: row.try_get("created_at")?,
+                        modified_by: row.try_get("modified_by")?,
+                        modified_at: row.try_get("modified_at")?,
+                    };
+                    users.push(user);
+                }
+                Ok(users)
+            },
+            Err(e) => Err(anyhow!("Error al buscar todos los usuarios: {}", e)),
+        }
     }
 }

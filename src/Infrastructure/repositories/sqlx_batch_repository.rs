@@ -119,8 +119,8 @@ impl BatchRepository {
             .map(|user| {
                 let pool = self.base.pool().clone();
                 async move {
-                    let result = sqlx::query!(
-                        r#"
+                    // Reemplazamos el macro query! con query normal
+                    let sql = r#"
                         UPDATE usuarios
                         SET 
                             usuario = $1,
@@ -133,19 +133,20 @@ impl BatchRepository {
                             fecha_modificacion = $8
                         WHERE idx_usuario = $9
                         RETURNING idx_usuario
-                        "#,
-                        user.username,
-                        user.first_name,
-                        user.last_name,
-                        user.email,
-                        user.password,
-                        user.status,
-                        user.modified_by,
-                        user.modified_at,
-                        user.id
-                    )
-                    .execute(&pool)
-                    .await;
+                    "#;
+                    
+                    let result = sqlx::query(sql)
+                        .bind(&user.username)
+                        .bind(&user.first_name)
+                        .bind(&user.last_name)
+                        .bind(&user.email)
+                        .bind(&user.password)
+                        .bind(user.status)
+                        .bind(user.modified_by)
+                        .bind(user.modified_at)
+                        .bind(user.id)
+                        .execute(&pool)
+                        .await;
                     
                     match result {
                         Ok(_) => Ok(user),

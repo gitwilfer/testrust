@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use anyhow::{Result, anyhow};
 use tokio::sync::RwLock;
-use sqlx::{Pool, Postgres, Transaction};
+use sqlx::{Pool, Postgres, Transaction, Row};
 use uuid::Uuid;
 
 use crate::Infrastructure::Persistence::sqlx_database;
@@ -139,50 +139,52 @@ impl UserCachedRepository {
         }
         
         // Si no está en caché, buscar en base de datos
-        let user = sqlx::query!(
-            r#"
+        let sql = r#"
             SELECT 
-                idx_usuario as "id: Uuid",
-                usuario as "username", 
-                nombre as "first_name", 
-                apellido as "last_name",
-                correo_electronico as "email", 
-                password_hash as "password",
-                status as "status: i16",
-                creado_por as "created_by: Option<Uuid>",
-                fecha_creacion as "created_at: NaiveDateTime",
-                modificado_por as "modified_by: Option<Uuid>",
-                fecha_modificacion as "modified_at: Option<NaiveDateTime>"
+                idx_usuario as id,
+                usuario as username, 
+                nombre as first_name, 
+                apellido as last_name,
+                correo_electronico as email, 
+                password_hash as password,
+                status,
+                creado_por as created_by,
+                fecha_creacion as created_at,
+                modificado_por as modified_by,
+                fecha_modificacion as modified_at
             FROM usuarios 
             WHERE idx_usuario = $1
-            "#,
-            id
-        )
-        .fetch_optional(self.inner.pool())
-        .await?;
+        "#;
         
-        if let Some(r) = user {
-            let user = crate::Domain::entities::user::User {
-                id: r.id,
-                username: r.username,
-                first_name: r.first_name,
-                last_name: r.last_name,
-                email: r.email,
-                password: r.password,
-                status: r.status,
-                created_by: r.created_by,
-                created_at: r.created_at,
-                modified_by: r.modified_by,
-                modified_at: r.modified_at,
-            };
+        let result = sqlx::query(sql)
+            .bind(id)
+            .fetch_optional(self.inner.pool())
+            .await;
             
-            // Guardar en caché
-            self.inner.put_in_cache(id, user.clone()).await;
-            
-            return Ok(Some(user));
+        match result {
+            Ok(Some(row)) => {
+                let user = crate::Domain::entities::user::User {
+                    id: row.try_get("id")?,
+                    username: row.try_get("username")?,
+                    first_name: row.try_get("first_name")?,
+                    last_name: row.try_get("last_name")?,
+                    email: row.try_get("email")?,
+                    password: row.try_get("password")?,
+                    status: row.try_get("status")?,
+                    created_by: row.try_get("created_by")?,
+                    created_at: row.try_get("created_at")?,
+                    modified_by: row.try_get("modified_by")?,
+                    modified_at: row.try_get("modified_at")?,
+                };
+                
+                // Guardar en caché
+                self.inner.put_in_cache(id, user.clone()).await;
+                
+                return Ok(Some(user));
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(anyhow!("Error al buscar usuario por ID: {}", e)),
         }
-        
-        Ok(None)
     }
     
     // Otras funciones como find_by_username, etc.
@@ -193,9 +195,38 @@ impl UserCachedRepository {
         // Invalidar caché antes de actualizar
         self.inner.invalidate_cache(&user.id).await;
         
-        // Implementación de actualización
-        // ...
+        // Implementación de actualización usando query sin macro
+        let sql = r#"
+            UPDATE usuarios
+            SET 
+                usuario = $1,
+                nombre = $2,
+                apellido = $3,
+                correo_electronico = $4,
+                password_hash = $5,
+                status = $6,
+                modificado_por = $7,
+                fecha_modificacion = $8
+            WHERE idx_usuario = $9
+            RETURNING idx_usuario
+        "#;
         
-        Ok(user)
+        let result = sqlx::query(sql)
+            .bind(&user.username)
+            .bind(&user.first_name)
+            .bind(&user.last_name)
+            .bind(&user.email)
+            .bind(&user.password)
+            .bind(user.status)
+            .bind(user.modified_by)
+            .bind(user.modified_at)
+            .bind(user.id)
+            .execute(self.inner.pool())
+            .await;
+            
+        match result {
+            Ok(_) => Ok(user),
+            Err(e) => Err(anyhow!("Error al actualizar usuario: {}", e)),
+        }
     }
 }
