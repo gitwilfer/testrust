@@ -1,15 +1,14 @@
- // 'container' es parte de la biblioteca (lib.rs), no se declara aquí.
- // Se accede a través de 'anyb::container'
+// 'container' es parte de la biblioteca (lib.rs), no se declara aquí.
+// Se accede a través de 'anyb::container'
 
- use actix_web::{web, App, HttpServer};
- use dotenv::dotenv;
- use log::{info, LevelFilter};
- use env_logger::Builder;
- use std::io::Write;
- use std::sync::Arc;
- // Usar el nombre del crate 'anyb' para acceder a la biblioteca (lib.rs)
- use anyb::container::AppState; // Solo importar AppState explícitamente
- // Las rutas a infrastructure, application, presentation se usarán completas
+use actix_web::{web, App, HttpServer};
+use dotenv::dotenv;
+use log::{info, LevelFilter};
+use env_logger::Builder;
+use std::io::Write;
+use std::sync::Arc;
+// Usar el nombre del crate 'anyb' para acceder a la biblioteca (lib.rs)
+// Las rutas a infrastructure, application, presentation se usarán completas
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -71,20 +70,15 @@ async fn main() -> std::io::Result<()> {
     info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
     
     // --- Construir el estado de la aplicación --- ANTES de HttpServer::new
-    // La construcción de dependencias ahora está encapsulada en AppState::build()
-    // Simplificamos el manejo de errores con expect() para asegurar que app_state se inicialice.
-    // En producción, manejar el error de forma más robusta (log, retornar error).
-    //let app_state = AppState::build()
-        //.expect("Error fatal al construir el estado de la aplicación");
-
-    let app_state = match anyb::container::AppState::build_with_sqlx().await {
+    // CAMBIO: Usar el nuevo módulo container en lugar del original container.rs
+    let app_state = match anyb::container::build_with_sqlx().await {
         Ok(state) => {
             info!("Aplicación inicializada con SQLx para consultas");
             state
         },
         Err(e) => {
             log::warn!("No se pudo inicializar con SQLx: {}. Usando implementación Diesel", e);
-            anyb::container::AppState::build()
+            anyb::container::build().await
                 .expect("Error fatal al construir el estado de la aplicación")
         }
     };
@@ -100,7 +94,7 @@ async fn main() -> std::io::Result<()> {
                 // Registrar los datos compartidos desde AppState
                 .app_data(app_state_clone.auth_controller_data.clone())
                 .app_data(app_state_clone.user_controller_data.clone())
-                .app_data(app_state_for_server.health_controller_data.clone())
+                .app_data(app_state_clone.health_controller_data.clone())
                 // Aquí registrarías otros datos de app_state_clone si los hubiera
 
                 // Configurar rutas API (usando la ruta completa)
