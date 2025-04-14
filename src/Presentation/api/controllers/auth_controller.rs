@@ -1,5 +1,6 @@
 use actix_web::{web, HttpResponse, post, Error};
 use std::sync::Arc;
+use crate::Container::AppState; // Importar AppState
 
 use crate::Application::dtos::auth_dto::LoginDto;
 use crate::Application::use_cases::traits::LoginUseCase;
@@ -23,7 +24,7 @@ impl AuthController {
 
 #[post("/login")]
 async fn login(
-    auth_controller: web::Data<AuthController>,
+    app_state: web::Data<AppState>, // Cambiar a AppState
     login_req: web::Json<LoginRequest>,
 ) -> Result<HttpResponse, Error> {
     // Validar request
@@ -36,7 +37,8 @@ async fn login(
     };
     
     // Ejecutar caso de uso
-    let result = auth_controller
+    // Acceder al controlador específico desde AppState
+    let result = app_state.auth_controller_data
         .login_use_case
         .execute(login_dto)
         .await;

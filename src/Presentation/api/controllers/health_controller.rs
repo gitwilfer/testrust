@@ -1,5 +1,6 @@
 use actix_web::{web, HttpResponse, get, Error};
 use std::sync::Arc;
+use crate::Container::AppState; // Importar AppState
 
 use crate::Infrastructure::monitoring::database_health_monitor::DatabaseHealthMonitor;
 
@@ -16,11 +17,12 @@ impl HealthController {
 }
 
 #[get("")]
-async fn health_check(controller: web::Data<HealthController>) -> Result<HttpResponse, Error> {
-    let db_health = controller.db_monitor.get_health_data().await;
-    let all_healthy = controller.db_monitor.all_healthy().await;
+async fn health_check(app_state: web::Data<AppState>) -> Result<HttpResponse, Error> { // Cambiar a AppState
+    // Acceder al controlador específico desde AppState
+    let db_health = app_state.health_controller_data.db_monitor.get_health_data().await;
+    let all_healthy = app_state.health_controller_data.db_monitor.all_healthy().await;
     
-    let time_since_check = controller.db_monitor.time_since_last_check().await
+    let time_since_check = app_state.health_controller_data.db_monitor.time_since_last_check().await
         .map(|d| d.as_secs())
         .unwrap_or(0);
     

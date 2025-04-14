@@ -1,4 +1,5 @@
 use actix_web::{web, HttpResponse, post, get, put, delete, Error};
+use crate::Container::AppState; // Importar AppState
 use crate::Application::use_cases::{
     CreateUserUseCase, 
     FindUserByIdUseCase, 
@@ -51,7 +52,7 @@ impl UserController {
 // Handler para la ruta POST /api/users
 #[post("")]
 async fn create_user(
-    user_controller: web::Data<UserController>,
+    app_state: web::Data<AppState>, // Cambiar a AppState
     user_req: web::Json<CreateUserRequest>,
 ) -> Result<HttpResponse, Error> {
     // Validar request
@@ -69,7 +70,8 @@ async fn create_user(
     };
     
     // Ejecutar caso de uso
-    match user_controller.create_user_use_case.execute(user_dto).await {
+    // Acceder al controlador específico desde AppState
+    match app_state.user_controller_data.create_user_use_case.execute(user_dto).await {
         Ok(user_dto) => {
             info!("Usuario creado con éxito: ID={}", user_dto.id);
             
@@ -99,13 +101,14 @@ async fn create_user(
 // Handler para la ruta GET /api/users/{id}
 #[get("/{id}")]
 async fn find_user_by_id(
-    user_controller: web::Data<UserController>,
+    app_state: web::Data<AppState>, // Cambiar a AppState
     id: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     let user_id = id.into_inner();
     info!("Buscando usuario por ID: {}", user_id);
     
-    match user_controller.find_user_by_id_use_case.execute(user_id).await {
+    // Acceder al controlador específico desde AppState
+    match app_state.user_controller_data.find_user_by_id_use_case.execute(user_id).await {
         Ok(user_dto) => {
             info!("Usuario encontrado: ID={}", user_dto.id);
             
@@ -135,13 +138,14 @@ async fn find_user_by_id(
 // Handler para la ruta GET /api/users/username/{username}
 #[get("/username/{username}")]
 async fn find_user_by_username(
-    user_controller: web::Data<UserController>,
+    app_state: web::Data<AppState>, // Cambiar a AppState
     username: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let username_value = username.into_inner();
     info!("Buscando usuario por username: {}", username_value);
     
-    match user_controller.find_user_by_username_use_case.execute(&username_value).await {
+    // Acceder al controlador específico desde AppState
+    match app_state.user_controller_data.find_user_by_username_use_case.execute(&username_value).await {
         Ok(user_dto) => {
             info!("Usuario encontrado por username {}: ID={}", username_value, user_dto.id);
             
@@ -171,11 +175,12 @@ async fn find_user_by_username(
 // Handler para la ruta GET /api/users
 #[get("")]
 async fn find_all_users(
-    user_controller: web::Data<UserController>,
+    app_state: web::Data<AppState>, // Cambiar a AppState
 ) -> Result<HttpResponse, Error> {
     info!("Obteniendo todos los usuarios");
     
-    match user_controller.find_all_users_use_case.execute().await {
+    // Acceder al controlador específico desde AppState
+    match app_state.user_controller_data.find_all_users_use_case.execute().await {
         Ok(user_dtos) => {
             info!("Se encontraron {} usuarios", user_dtos.len());
             
@@ -208,7 +213,7 @@ async fn find_all_users(
 // Handler para la ruta PUT /api/users/{id}
 #[put("/{id}")]
 async fn update_user(
-    user_controller: web::Data<UserController>,
+    app_state: web::Data<AppState>, // Cambiar a AppState
     id: web::Path<Uuid>,
     user_req: web::Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, Error> {
@@ -227,7 +232,8 @@ async fn update_user(
     };
     
     // Ejecutar caso de uso
-    match user_controller.update_user_use_case.execute(user_id, update_dto, None).await {
+    // Acceder al controlador específico desde AppState
+    match app_state.user_controller_data.update_user_use_case.execute(user_id, update_dto, None).await {
         Ok(user_dto) => {
             info!("Usuario actualizado con éxito: ID={}", user_dto.id);
             
@@ -257,13 +263,14 @@ async fn update_user(
 // Handler para la ruta DELETE /api/users/{id}
 #[delete("/{id}")]
 async fn delete_user(
-    user_controller: web::Data<UserController>,
+    app_state: web::Data<AppState>, // Cambiar a AppState
     id: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     let user_id = id.into_inner();
     info!("Eliminando usuario con ID: {}", user_id);
     
-    match user_controller.delete_user_use_case.execute(user_id).await {
+    // Acceder al controlador específico desde AppState
+    match app_state.user_controller_data.delete_user_use_case.execute(user_id).await {
         Ok(()) => {
             info!("Usuario eliminado con éxito: ID={}", user_id);
             
