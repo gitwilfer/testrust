@@ -1,3 +1,4 @@
+// --- INICIO CÓDIGO CORREGIDO ---
 pub mod user_module;
 pub mod auth_module;
 pub mod health_module;
@@ -9,11 +10,12 @@ use log::info;
 /// Registra todos los módulos estándar (sin optimización SQLx)
 pub async fn register_all(builder: &mut ContainerBuilder) -> Result<()> {
     info!("Registrando todos los módulos...");
-    
-    user_module::register(builder)?;
-    auth_module::register(builder)?;
-    health_module::register(builder)?;
-    
+
+    // Usar la sintaxis de función asociada: Modulo::Struct::funcion()
+    user_module::UserModule::register(builder)?;
+    auth_module::AuthModule::register(builder)?;
+    health_module::HealthModule::register(builder)?;
+
     info!("Todos los módulos registrados correctamente");
     Ok(())
 }
@@ -21,11 +23,14 @@ pub async fn register_all(builder: &mut ContainerBuilder) -> Result<()> {
 /// Registra todos los módulos con optimización SQLx cuando es posible
 pub async fn register_all_with_sqlx(builder: &mut ContainerBuilder) -> Result<()> {
     info!("Registrando todos los módulos con soporte SQLx...");
-    
-    user_module::register_with_sqlx(builder).await?;
-    auth_module::register_with_sqlx(builder).await?;
-    health_module::register(builder)?;
-    
+
+    // Usar la sintaxis de función asociada: Modulo::Struct::funcion()
+    user_module::UserModule::register_with_sqlx(builder).await?;
+    auth_module::AuthModule::register_with_sqlx(builder).await?;
+    // Health module no tiene versión SQLx, usamos la estándar
+    health_module::HealthModule::register(builder)?;
+
     info!("Todos los módulos registrados correctamente con soporte SQLx");
     Ok(())
 }
+// --- FIN CÓDIGO CORREGIDO ---
