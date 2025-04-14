@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::time::{Duration, Instant};
-use async_trait::async_trait;
+// use async_trait::async_trait;
 use anyhow::{Result, anyhow};
 use tokio::sync::RwLock;
 use sqlx::{Pool, Postgres, Transaction, Row};

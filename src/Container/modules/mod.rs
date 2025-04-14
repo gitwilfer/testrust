@@ -2,7 +2,7 @@ pub mod user_module;
 pub mod auth_module;
 pub mod health_module;
 
-use crate::container::builder::ContainerBuilder;
+use crate::Container::builder::ContainerBuilder;
 use anyhow::Result;
 use log::info;
 

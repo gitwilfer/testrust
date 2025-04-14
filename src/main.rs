@@ -71,14 +71,14 @@ async fn main() -> std::io::Result<()> {
     
     // --- Construir el estado de la aplicación --- ANTES de HttpServer::new
     // CAMBIO: Usar el nuevo módulo container en lugar del original container.rs
-    let app_state = match anyb::container::build_with_sqlx().await {
+    let app_state = match anyb::Container::build_with_sqlx().await {
         Ok(state) => {
             info!("Aplicación inicializada con SQLx para consultas");
             state
         },
         Err(e) => {
             log::warn!("No se pudo inicializar con SQLx: {}. Usando implementación Diesel", e);
-            anyb::container::build().await
+            anyb::Container::build().await
                 .expect("Error fatal al construir el estado de la aplicación")
         }
     };

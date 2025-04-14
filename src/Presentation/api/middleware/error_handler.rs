@@ -2,7 +2,8 @@
 // Registra el error y devuelve una respuesta HTTP apropiada al cliente.
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpResponse, http::StatusCode, error::ResponseError
+    Error
+    // Error, HttpResponse, http::StatusCode, error::ResponseError
 };
 use futures::future::{ok, LocalBoxFuture, Ready};
 use log::error;

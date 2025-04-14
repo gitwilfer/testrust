@@ -9,7 +9,7 @@ use chrono::Utc;
 use uuid::Uuid;
 use std::sync::Arc;
 use async_trait::async_trait;
-use log::{info, debug, error, warn};
+use log::{debug, error, warn};
 
 pub struct UpdateUserUseCase {
     pub user_repository: Arc<dyn UserRepositoryPort>,

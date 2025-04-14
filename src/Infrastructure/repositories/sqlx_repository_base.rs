@@ -1,6 +1,6 @@
 // src/Infrastructure/repositories/sqlx_repository_base.rs
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use sqlx::{Pool, Postgres, Transaction};
 use std::sync::Arc;
 

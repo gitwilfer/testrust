@@ -5,14 +5,12 @@ use anyhow::Result;
 use std::sync::Arc;
 use log::{info, warn};
 
-use dependency_provider::{DependencyProvider, DefaultDependencyProvider};
+// Importar tanto el struct DefaultDependencyProvider como el trait DependencyProvider
+use dependency_provider::{DefaultDependencyProvider, DependencyProvider};
 use crate::Infrastructure::Persistence::sqlx_database;
 
-// Re-exportar estructura principal para facilidad de uso
-pub use dependency_provider::AppDependencies;
-
 /// Crea las dependencias con implementaciones estándar basadas en Diesel
-pub fn create_dependencies() -> Result<AppDependencies> {
+pub fn create_dependencies() -> Result<dependency_provider::AppDependencies> {
     info!("Creando dependencias con implementaciones estándar");
     
     // Crear proveedor de dependencias
@@ -29,7 +27,7 @@ pub fn create_dependencies() -> Result<AppDependencies> {
 }
 
 /// Crea las dependencias con soporte para SQLx en consultas
-pub async fn create_dependencies_with_sqlx() -> Result<AppDependencies> {
+pub async fn create_dependencies_with_sqlx() -> Result<dependency_provider::AppDependencies> {
     info!("Creando dependencias con soporte SQLx para consultas");
     
     // Intentar obtener pool de SQLx

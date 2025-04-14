@@ -9,9 +9,9 @@ use crate::Application::ports::repositories::UserCommandRepository;
 use crate::Application::services::get_database_for_entity;
 use crate::Domain::entities::user::User;
 use crate::Infrastructure::Persistence::database::{self, DbConnection};
-use crate::Infrastructure::Persistence::models::user_model::UserModel;
+// use crate::Infrastructure::Persistence::models::user_model::UserModel;
 use crate::Infrastructure::Persistence::schema::users;
-use crate::Infrastructure::Persistence::mapper::{user_to_model, model_to_user};
+use crate::Infrastructure::Persistence::mapper::user_to_model;
 
 pub struct UserCommandRepositoryImpl {
     pool: Arc<Pool<ConnectionManager<diesel::PgConnection>>>,

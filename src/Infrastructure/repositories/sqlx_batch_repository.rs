@@ -1,6 +1,6 @@
 // src/Infrastructure/repositories/sqlx_batch_repository.rs
 
-use async_trait::async_trait;
+// use async_trait::async_trait;
 use anyhow::{Result, anyhow};
 use futures::{stream, StreamExt};
 use sqlx::{Pool, Postgres, Row};

@@ -2,11 +2,11 @@ use std::sync::Arc;
 use anyhow::Result;
 use log::{info, debug, trace};
 
-use crate::factory::dependency_provider::DependencyProvider;
+use crate::Factory::dependency_provider::{DefaultDependencyProvider, DependencyProvider};
 use crate::Infrastructure::monitoring::DatabaseHealthMonitor;
 
 /// Registra todos los componentes relacionados con el monitoreo de salud
-pub fn register(provider: &mut dyn DependencyProvider) -> Result<()> {
+pub fn register(provider: &mut DefaultDependencyProvider) -> Result<()> {
     debug!("Registrando componentes de monitoreo...");
     
     // Crear monitor de salud de base de datos

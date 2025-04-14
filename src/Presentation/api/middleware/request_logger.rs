@@ -6,7 +6,7 @@ use actix_web::{
 };
 use futures::future::{ok, LocalBoxFuture, Ready};
 use log::{info, debug};
-use std::future::Future;
+// use std::future::Future;
 //use std::pin::Pin;
 use std::time::Instant;
 

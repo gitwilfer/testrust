@@ -2,14 +2,14 @@ use std::sync::Arc;
 use anyhow::Result;
 use log::{info, debug, trace};
 
-use crate::factory::dependency_provider::DependencyProvider;
+use crate::Factory::dependency_provider::{DefaultDependencyProvider, DependencyProvider};
 use crate::Application::use_cases::user::login::LoginUseCase;
 use crate::Infrastructure::auth::AuthServiceImpl;
 use crate::Infrastructure::repositories::{UserQueryRepositoryImpl, UserQueryRepositorySqlx};
 use crate::Application::ports::repositories::{UserQueryRepository, AuthServicePort};
 
 /// Registra todos los componentes relacionados con autenticación
-pub fn register(provider: &mut dyn DependencyProvider) -> Result<()> {
+pub fn register(provider: &mut DefaultDependencyProvider) -> Result<()> {
     debug!("Registrando componentes de autenticación...");
     
     // Registrar servicio de autenticación
@@ -47,7 +47,7 @@ pub fn register(provider: &mut dyn DependencyProvider) -> Result<()> {
 }
 
 /// Registra todos los componentes relacionados con autenticación con soporte SQLx
-pub fn register_with_sqlx(provider: &mut dyn DependencyProvider) -> Result<()> {
+pub fn register_with_sqlx(provider: &mut DefaultDependencyProvider) -> Result<()> {
     debug!("Registrando componentes de autenticación con soporte SQLx...");
     
     // Verificar si ya existe un repositorio de consulta
@@ -57,7 +57,7 @@ pub fn register_with_sqlx(provider: &mut dyn DependencyProvider) -> Result<()> {
     }
     
     // Verificar si se ha configurado un pool de SQLx
-    let sqlx_pool = match provider.get::<sqlx::Pool<sqlx::Postgres>>() {
+    let sqlx_pool = match provider.get_sqlx_pool() {
         Some(pool) => pool,
         None => {
             debug!("No se encontró pool SQLx en el proveedor, registrando componentes estándar");

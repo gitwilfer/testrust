@@ -3,12 +3,12 @@ pub mod auth_factory;
 pub mod health_factory;
 
 use anyhow::Result;
-use log::{info, debug};
+use log::info;
 
-use crate::factory::dependency_provider::DependencyProvider;
+use crate::Factory::dependency_provider::DefaultDependencyProvider;
 
 /// Registra todas las implementaciones estándar
-pub fn register_all(provider: &mut dyn DependencyProvider) -> Result<()> {
+pub fn register_all(provider: &mut DefaultDependencyProvider) -> Result<()> {
     info!("Registrando todas las implementaciones...");
     
     // Registrar componentes por dominio
@@ -21,7 +21,7 @@ pub fn register_all(provider: &mut dyn DependencyProvider) -> Result<()> {
 }
 
 /// Registra todas las implementaciones con soporte SQLx
-pub fn register_all_with_sqlx(provider: &mut dyn DependencyProvider) -> Result<()> {
+pub fn register_all_with_sqlx(provider: &mut DefaultDependencyProvider) -> Result<()> {
     info!("Registrando todas las implementaciones con soporte SQLx...");
     
     // Registrar componentes por dominio con soporte SQLx

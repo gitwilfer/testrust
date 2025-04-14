@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use anyhow::Result;
-use log::{info, debug, warn};
+use log::{info, debug};
 
-use crate::container::builder::ContainerBuilder;
+use crate::Container::builder::ContainerBuilder;
 use crate::Infrastructure::monitoring::DatabaseHealthMonitor;
 use crate::Presentation::api::controllers::HealthController;
 
@@ -21,7 +21,7 @@ pub fn register(builder: &mut ContainerBuilder) -> Result<()> {
     
     // Registrar controlador de salud
     let health_controller = HealthController::new(db_monitor);
-    builder.register_service(health_controller);
+    builder.register_arc_service(Arc::new(health_controller));
     debug!("Controlador de salud registrado");
     
     info!("Módulo de monitoreo registrado correctamente");

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use anyhow::Result;
-use log::{info, debug, warn};
+use log::{info, debug};
 
-use crate::container::builder::ContainerBuilder;
+use crate::Container::builder::ContainerBuilder;
 use crate::Application::mappers::UserMapper;
 use crate::Application::use_cases::user::{
     CreateUserUseCase, FindUserByIdUseCase, FindUserByUsernameUseCase,
@@ -104,15 +104,15 @@ pub fn register(builder: &mut ContainerBuilder) -> Result<()> {
     debug!("Casos de uso de usuarios registrados");
     
     // Registrar el controlador
-    let user_controller = UserController::new(
+    let user_controller = Arc::new(UserController::new( // Envolver en Arc
         create_user_use_case,
         find_user_by_id_use_case,
         find_user_by_username_use_case,
         find_all_users_use_case,
         update_user_use_case,
         delete_user_use_case
-    );
-    builder.register_service(user_controller);
+    ));
+    builder.register_arc_service(user_controller); // Usar register_arc_service
     debug!("Controlador de usuarios registrado");
     
     info!("Módulo de usuarios registrado correctamente");
@@ -210,15 +210,15 @@ pub async fn register_with_sqlx(builder: &mut ContainerBuilder) -> Result<()> {
     debug!("Casos de uso estándar de usuarios registrados");
     
     // Registrar el controlador con la versión optimizada
-    let user_controller = UserController::new(
+    let user_controller = Arc::new(UserController::new( // Envolver en Arc
         create_user_use_case,
         find_user_by_id_use_case,
         find_user_by_username_optimized_use_case, // Usar versión optimizada
         find_all_users_use_case,
         update_user_use_case,
         delete_user_use_case
-    );
-    builder.register_service(user_controller);
+    ));
+    builder.register_arc_service(user_controller); // Usar register_arc_service
     debug!("Controlador de usuarios con soporte SQLx registrado");
     
     info!("Módulo de usuarios con soporte SQLx registrado correctamente");

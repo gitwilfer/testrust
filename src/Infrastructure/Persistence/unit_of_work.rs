@@ -21,7 +21,7 @@ pub struct DatabaseRepositoryRegistry {
 
 impl DatabaseRepositoryRegistry {
     pub fn new(
-        diesel_pool: Arc<Pool<ConnectionManager<PgConnection>>>,
+        pool: Arc<Pool<ConnectionManager<PgConnection>>>,
         sqlx_pool: Arc<sqlx::Pool<Postgres>>
     ) -> Result<Self> {
         Ok(Self {

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use log::{debug, trace};
 use std::collections::HashMap;
 use std::any::{Any, TypeId};
@@ -36,15 +36,16 @@ pub struct AppDependencies {
 }
 
 /// Trait que define un proveedor de dependencias
+/// Nota: Este trait no se usará como object trait (dyn)
 pub trait DependencyProvider {
     /// Obtiene una instancia de un tipo específico
-    fn get<T: 'static + ?Sized>(&self) -> Option<Arc<T>>;
+    fn get<T: 'static + Send + Sync + ?Sized>(&self) -> Option<Arc<T>>;
     
     /// Registra una instancia de un tipo específico
-    fn register<T: 'static + ?Sized>(&mut self, instance: Arc<T>);
+    fn register<T: 'static + Send + Sync + ?Sized>(&mut self, instance: Arc<T>);
     
     /// Comprueba si existe una instancia del tipo especificado
-    fn has<T: 'static + ?Sized>(&self) -> bool;
+    fn has<T: 'static + Send + Sync + ?Sized>(&self) -> bool;
     
     /// Construye AppDependencies con todas las dependencias registradas
     fn build(&self) -> AppDependencies;
@@ -82,7 +83,7 @@ impl DefaultDependencyProvider {
 
 impl DependencyProvider for DefaultDependencyProvider {
     /// Obtiene una instancia registrada por su tipo
-    fn get<T: 'static + ?Sized>(&self) -> Option<Arc<T>> {
+    fn get<T: 'static + Send + Sync + ?Sized>(&self) -> Option<Arc<T>> {
         let type_id = TypeId::of::<Arc<T>>();
         trace!("Obteniendo dependencia de tipo: {}", std::any::type_name::<T>());
         
@@ -92,7 +93,7 @@ impl DependencyProvider for DefaultDependencyProvider {
     }
     
     /// Registra una instancia para un tipo específico
-    fn register<T: 'static + ?Sized>(&mut self, instance: Arc<T>) {
+    fn register<T: 'static + Send + Sync + ?Sized>(&mut self, instance: Arc<T>) {
         let type_id = TypeId::of::<Arc<T>>();
         trace!("Registrando dependencia de tipo: {}", std::any::type_name::<T>());
         
@@ -100,7 +101,7 @@ impl DependencyProvider for DefaultDependencyProvider {
     }
     
     /// Comprueba si existe una instancia del tipo especificado
-    fn has<T: 'static + ?Sized>(&self) -> bool {
+    fn has<T: 'static + Send + Sync + ?Sized>(&self) -> bool {
         let type_id = TypeId::of::<Arc<T>>();
         self.instances.contains_key(&type_id)
     }
@@ -169,82 +170,5 @@ impl DependencyProvider for DefaultDependencyProvider {
             find_user_by_username_use_case,
             login_use_case,
         }
-    }
-}
-
-/// Implementación con carga perezosa (Lazy Loading) de dependencias
-pub struct LazyDependencyProvider {
-    provider: DefaultDependencyProvider,
-    factories: HashMap<TypeId, Box<dyn Fn() -> Box<dyn Any + Send + Sync> + Send + Sync>>,
-}
-
-impl LazyDependencyProvider {
-    /// Crea un nuevo proveedor de dependencias con carga perezosa
-    pub fn new() -> Result<Self> {
-        debug!("Creando nuevo LazyDependencyProvider");
-        Ok(Self {
-            provider: DefaultDependencyProvider::new()?,
-            factories: HashMap::new(),
-        })
-    }
-    
-    /// Registra una fábrica para un tipo específico
-    pub fn register_factory<T: 'static + ?Sized, F>(&mut self, factory: F)
-    where
-        F: Fn() -> Arc<T> + Send + Sync + 'static,
-    {
-        let type_id = TypeId::of::<Arc<T>>();
-        
-        let boxed_factory = Box::new(move || -> Box<dyn Any + Send + Sync> {
-            Box::new(factory())
-        });
-        
-        self.factories.insert(type_id, boxed_factory);
-    }
-}
-
-impl DependencyProvider for LazyDependencyProvider {
-    fn get<T: 'static + ?Sized>(&self) -> Option<Arc<T>> {
-        // Primero intentar obtener de las instancias ya creadas
-        if let Some(instance) = self.provider.get::<T>() {
-            return Some(instance);
-        }
-        
-        // Si no existe, intentar crear usando la fábrica
-        let type_id = TypeId::of::<Arc<T>>();
-        
-        if let Some(factory) = self.factories.get(&type_id) {
-            // Crear la instancia
-            let instance_any = factory();
-            
-            // Intentar convertir a Arc<T>
-            if let Some(instance) = instance_any.downcast_ref::<Arc<T>>() {
-                // Clonar y guardar en provider
-                let cloned = instance.clone();
-                
-                // En un entorno real, deberíamos poder modificar self aquí,
-                // pero para esta demo, no podemos debido a la firma de get()
-                // Una solución sería usar interior mutability (RefCell, Mutex, etc.)
-                
-                return Some(cloned);
-            }
-        }
-        
-        None
-    }
-    
-    fn register<T: 'static + ?Sized>(&mut self, instance: Arc<T>) {
-        self.provider.register(instance);
-    }
-    
-    fn has<T: 'static + ?Sized>(&self) -> bool {
-        let type_id = TypeId::of::<Arc<T>>();
-        self.provider.has::<T>() || self.factories.contains_key(&type_id)
-    }
-    
-    fn build(&self) -> AppDependencies {
-        // Aquí podríamos implementar lógica para asegurar que todas las 
-        // dependencias necesarias se han creado antes de construir AppDependencies
-        self.provider.build()
     }
 }

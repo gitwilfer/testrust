@@ -3,10 +3,10 @@ use actix_web::{
     Error, HttpMessage,
 };
 use futures::future::{ok, Ready, LocalBoxFuture};
-use std::future::Future;
-use std::pin::Pin;
+// use std::future::Future;
+// use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
+// use std::task::{Context, Poll};
 use log::debug;
 
 use crate::Application::errors::application_error::ApplicationError;

@@ -4,5 +4,5 @@ pub mod auth;
 pub mod Services;    // Corregir capitalización
 pub mod config;
 
-pub mod factory;
+
 pub mod monitoring;

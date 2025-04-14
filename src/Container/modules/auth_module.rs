@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use anyhow::Result;
-use log::{info, debug, warn};
+use log::{info, debug};
 
-use crate::container::builder::ContainerBuilder;
+use crate::Container::builder::ContainerBuilder;
 use crate::Application::use_cases::user::login::LoginUseCase;
 use crate::Infrastructure::auth::AuthServiceImpl;
 use crate::Infrastructure::repositories::{UserQueryRepositoryImpl, UserQueryRepositorySqlx};
@@ -37,8 +37,8 @@ pub fn register(builder: &mut ContainerBuilder) -> Result<()> {
     debug!("Caso de uso de login registrado");
     
     // Registrar controlador de autenticación
-    let auth_controller = AuthController::new(login_use_case);
-    builder.register_service(auth_controller);
+    let auth_controller = Arc::new(AuthController::new(login_use_case)); // Envolver en Arc
+    builder.register_arc_service(auth_controller); // Usar register_arc_service
     debug!("Controlador de autenticación registrado");
     
     info!("Módulo de autenticación registrado correctamente");
@@ -77,8 +77,8 @@ pub async fn register_with_sqlx(builder: &mut ContainerBuilder) -> Result<()> {
     debug!("Caso de uso de login con repositorio SQLx registrado");
     
     // Registrar controlador de autenticación
-    let auth_controller = AuthController::new(login_use_case);
-    builder.register_service(auth_controller);
+    let auth_controller = Arc::new(AuthController::new(login_use_case)); // Envolver en Arc
+    builder.register_arc_service(auth_controller); // Usar register_arc_service
     debug!("Controlador de autenticación registrado");
     
     info!("Módulo de autenticación con soporte SQLx registrado correctamente");
