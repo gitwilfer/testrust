@@ -83,7 +83,6 @@ async fn main() -> std::io::Result<()> {
     };
 
     // Clonamos el estado ANTES de moverlo a la clausura.
-    // let app_state_for_server = app_state.clone();
     let app_state_for_server = app_state.clone();
     
     HttpServer::new(move || {
@@ -99,7 +98,7 @@ async fn main() -> std::io::Result<()> {
                 .app_data(web::Data::new(app_state_clone.clone()))
 
                 // Configurar rutas API (usando la ruta completa)
-                .configure(anyb::Presentation::api::routes::config) // Corregir capitalización
+                .configure(anyb::Presentation::api::routes::config)
     
                     // Añadir Swagger si está activado
                     // (Considera mover esta lógica también a una función de configuración si crece)
