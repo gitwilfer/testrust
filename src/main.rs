@@ -6,7 +6,7 @@ use dotenv::dotenv;
 use log::{info, LevelFilter};
 use env_logger::Builder;
 use std::io::Write;
-use std::sync::Arc;
+// use std::sync::Arc;
 // Usar el nombre del crate 'anyb' para acceder a la biblioteca (lib.rs)
 // Las rutas a infrastructure, application, presentation se usarán completas
 

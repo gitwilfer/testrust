@@ -30,12 +30,6 @@ pub struct EntityModel {
     
     #[diesel(column_name = modificado_por)]
     pub modified_by: Option<Uuid>,
-    
-    #[diesel(column_name = fecha_eliminacion)]
-    pub deleted_at: Option<NaiveDateTime>,
-    
-    #[diesel(column_name = eliminado_por)]
-    pub deleted_by: Option<Uuid>,
 }
 
 // Mapper para convertir entre modelos de persistencia y entidades de dominio
@@ -54,8 +48,6 @@ pub mod mapper {
             created_by: entity.created_by,
             modified_at: entity.modified_at,
             modified_by: entity.modified_by,
-            deleted_at: entity.deleted_at,
-            deleted_by: entity.deleted_by,
         }
     }
     
@@ -70,8 +62,6 @@ pub mod mapper {
             created_by: model.created_by,
             modified_at: model.modified_at,
             modified_by: model.modified_by,
-            deleted_at: model.deleted_at,
-            deleted_by: model.deleted_by,
         }
     }
 }
