@@ -288,7 +288,7 @@ async fn delete_user(
 // Configuración de las rutas
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("/users")
+        web::scope("")
             .service(create_user)
             .service(find_all_users)
             .service(find_user_by_id)

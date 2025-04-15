@@ -8,17 +8,11 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     // Crear instancia de AuthMiddleware
     let auth_middleware = AuthMiddleware::new();
 
-    // Rutas sin autenticación (login)
-    cfg.service(
-        web::scope("/api")
-            .wrap(RequestLoggerMiddleware)
-            .wrap(ErrorHandlerMiddleware)
-            .configure(auth_controller::config)
-    );
+
 
     // Rutas protegidas con middleware de autenticación
     cfg.service(
-        web::scope("/api")
+        web::scope("/api/users")
             .wrap(RequestLoggerMiddleware)
             .wrap(ErrorHandlerMiddleware)
             .wrap(auth_middleware.clone())
@@ -31,5 +25,13 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .wrap(ErrorHandlerMiddleware)
             .wrap(auth_middleware)
             .configure(health_controller::config)
+    );
+
+    // Rutas sin autenticación (login)
+    cfg.service(
+        web::scope("/api")
+            .wrap(RequestLoggerMiddleware)
+            .wrap(ErrorHandlerMiddleware)
+            .configure(auth_controller::config)
     );
 }

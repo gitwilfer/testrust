@@ -43,7 +43,7 @@ async fn health_check(app_state: web::Data<AppState>) -> Result<HttpResponse, Er
 // Configuración de las rutas
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("/health")
+        web::scope("")
             .service(health_check)
     );
 }
