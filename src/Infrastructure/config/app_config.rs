@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use log::info;
 
 use crate::Infrastructure::config::Environment;
-use crate::Infrastructure::Persistence::database::DatabaseConfig;
+use crate::Infrastructure::Persistence::connection_pools::DatabaseConfig;
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {

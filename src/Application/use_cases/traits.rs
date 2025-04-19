@@ -28,7 +28,7 @@ pub trait FindAllUsersUseCase: Send + Sync {
 
 #[async_trait]
 pub trait UpdateUserUseCase: Send + Sync {
-    async fn execute(&self, id: Uuid, dto: UpdateUserDto, modified_by: Option<Uuid>) -> Result<UserResponseDto, ApplicationError>;
+    async fn execute(&self, id: Uuid, dto: UpdateUserDto, updated_by: Option<Uuid>) -> Result<UserResponseDto, ApplicationError>;
 }
 
 #[async_trait]

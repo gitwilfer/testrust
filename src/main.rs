@@ -1,24 +1,21 @@
-// 'container' es parte de la biblioteca (lib.rs), no se declara aquí.
-// Se accede a través de 'anyb::container'
-
 use actix_web::{web, App, HttpServer, middleware::Logger};
 use dotenv::dotenv;
-use log::{info, LevelFilter};
+use log::{info, LevelFilter, error}; // Añadido error
 use env_logger::Builder;
 use std::io::Write;
-// use std::sync::Arc;
 // Usar el nombre del crate 'anyb' para acceder a la biblioteca (lib.rs)
-// Las rutas a infrastructure, application, presentation se usarán completas
+use anyb; // Importar el crate
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Cargar variables de entorno
+    // --- 1. Cargar Configuración ---
+    // Ventaja: Necesaria antes que nada para configurar logger, pools, etc.
     dotenv().ok();
+    let config = anyb::Infrastructure::config::app_config::get_config(); // Usar PascalCase como en lib.rs
 
-    // Obtener configuración
-    let config = anyb::Infrastructure::config::app_config::get_config(); // Corregir capitalización
-    
-    // Inicializar el logger con nivel basado en configuración
+    // --- 2. Inicializar Logger ---
+    // Ventaja: Permite ver logs desde el inicio, incluyendo la inicialización de pools y contenedor.
+    // Usa config.log_level.
     let log_level = match config.log_level.as_str() {
         "trace" => LevelFilter::Trace,
         "debug" => LevelFilter::Debug,
@@ -27,91 +24,67 @@ async fn main() -> std::io::Result<()> {
         "error" => LevelFilter::Error,
         _ => LevelFilter::Info,
     };
-    
     Builder::new()
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} [{}] - {}",
-                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                record.level(),
-                record.args()
-            )
-        })
+        .format(|buf, record| { /* ... formato ... */ })
         .filter(None, log_level)
         .init();
 
     info!("Iniciando aplicación en entorno: {:?}", config.environment);
     info!("Configuración cargada: {:?}", config);
 
-    // Inicializar conexiones a bases de datos usando la configuración
-    match anyb::Infrastructure::Persistence::database::initialize_with_config(&config) {
-        Ok(_) => info!("Conexiones a bases de datos Diesel inicializadas correctamente"),
+    // --- 3. Inicializar Pools de Conexión (CRÍTICO ANTES DE BUILD) ---
+    // Ventaja: Asegura que los pools (Diesel Async y SQLx) estén listos y disponibles
+    // ANTES de que el contenedor intente obtenerlos y registrarlos.
+    // database_module (llamado por build_app_state) necesita estos pools.
+    match anyb::Infrastructure::Persistence::connection_pools::initialize_pools(&config).await { // Añadido .await
+        Ok(_) => info!("Pools de bases de datos inicializados correctamente"),
         Err(e) => {
-            log::error!("Error al inicializar conexiones a bases de datos Diesel: {}", e);
+            error!("Error FATAL al inicializar pools de bases de datos: {}", e);
+            // Salir si los pools no se pueden inicializar, la app no puede funcionar.
             return Err(std::io::Error::new(std::io::ErrorKind::Other, "Error de inicialización de BD"));
         }
     }
 
-    // Inicializar conexiones SQLx
-    match anyb::Infrastructure::Persistence::sqlx_database::initialize_with_config(&config).await {
-        Ok(_) => info!("Conexiones a bases de datos SQLx inicializadas correctamente"),
-        Err(e) => {
-            log::error!("Error al inicializar conexiones a bases de datos SQLx: {}", e);
-            log::warn!("Continuando con Diesel para operaciones de base de datos");
-        }
-    }
-    // Inicializar mapeado de entidades a bases de datos
-    anyb::Application::services::initialize_database_mappings(); // Corregir capitalización
+    // --- 4. Inicializar Mapeos (Opcional, si se usa database_selector) ---
+    // Ventaja: Configura mapeos específicos si son necesarios antes de construir dependencias.
+    // anyb::Application::services::initialize_database_mappings(); // Usar PascalCase
 
-    // Clonar el config para usarlo después del move
-    let server_config = config.clone();
-
-    info!("Iniciando servidor HTTP en {}:{}", config.http_host, config.http_port);
-    
-    // --- Construir el estado de la aplicación --- ANTES de HttpServer::new
-    let app_state = match anyb::Container::build_with_sqlx().await {
+    // --- 5. Construir el Estado de la Aplicación (Contenedor) ---
+    // Ventaja: Ahora que los pools están listos, podemos construir todas las dependencias
+    // (UoW, repositorios, casos de uso, controladores) de forma segura y unificada.
+    info!("Construyendo AppState...");
+    let app_state = match anyb::Container::build_app_state().await { // Llamar a la función unificada
         Ok(state) => {
-            info!("Aplicación inicializada con SQLx para consultas");
-            state
+            info!("AppState construido exitosamente.");
+            state // Asigna el AppState construido
         },
         Err(e) => {
-            log::warn!("No se pudo inicializar con SQLx: {}. Usando implementación Diesel", e);
-            anyb::Container::build().await
-                .expect("Error fatal al construir el estado de la aplicación")
+            // Si la construcción unificada falla, es un error fatal.
+            error!("Error FATAL al construir el AppState: {:?}", e);
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Error al construir AppState"));
         }
     };
 
-    // Clonamos el estado ANTES de moverlo a la clausura.
-    let app_state_for_server = app_state.clone();
-    
+    // --- 6. Preparar Datos para el Servidor ---
+    // Ventaja: Clonamos lo necesario ANTES de mover al closure del servidor.
+    let server_config = config.clone(); // Clonar config si se usa en el closure
+    let app_state_for_server = app_state.clone(); // Clonar AppState para mover
+
+    // --- 7. Iniciar Servidor HTTP ---
+    // Ventaja: El servidor solo se inicia si todos los pasos anteriores fueron exitosos.
+    info!("Iniciando servidor HTTP en {}:{}", server_config.http_host, server_config.http_port);
     HttpServer::new(move || {
-            // Usamos el estado clonado que fue movido a la clausura.
-            let app_state_clone = app_state_for_server.clone();
+            // El closure 'move' toma posesión de app_state_for_server
+            let app_state_clone = app_state_for_server.clone(); // Clonar el Arc para cada worker
 
             App::new()
-                // Habilitar logs de Actix (opcional pero útil)
                 .wrap(Logger::default())
-                // Registrar los datos compartidos desde AppState
-                // Registrar el AppState completo. Actix puede extraer los web::Data<Controller>
-                // específicos si están disponibles como campos públicos en AppState.
-                .app_data(web::Data::new(app_state_clone.clone()))
-
-                // Configurar rutas API (usando la ruta completa)
-                .configure(anyb::Presentation::api::routes::config)
-    
-                    // Añadir Swagger si está activado
-                    // (Considera mover esta lógica también a una función de configuración si crece)
-                    // .configure(|cfg| {
-                    //     // Necesitamos clonar server_config o config para usarla aquí si se descomenta
-                    //     let config_clone = server_config.clone();
-                    //     if config_clone.enable_swagger {
-                    //         info!("Swagger UI enabled at /swagger-ui");
-                    //     }
-                    // })
+                .app_data(web::Data::new(app_state_clone)) // Pasar el AppState completo
+                .configure(anyb::Presentation::api::routes::config) // Configurar rutas
+                // ... (swagger opcional) ...
             })
     .bind((server_config.http_host.clone(), server_config.http_port))?
-    .workers(4)
+    .workers(4) // Ajustar según necesidad
     .run()
     .await
 }

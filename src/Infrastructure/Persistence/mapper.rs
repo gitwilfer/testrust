@@ -1,5 +1,6 @@
 use crate::Domain::entities::user::User;
 use crate::Infrastructure::Persistence::models::user_model::UserModel;
+use chrono::{DateTime, Utc, NaiveDateTime};
 
 pub fn user_to_model(user: &User) -> UserModel {
     UserModel {
@@ -10,9 +11,9 @@ pub fn user_to_model(user: &User) -> UserModel {
         email: user.email.clone(),
         password: user.password.clone(),
         created_by: user.created_by,
-        created_at: user.created_at,
-        modified_by: user.modified_by,
-        modified_at: user.modified_at,
+        created_at: user.created_at.naive_utc(),
+        updated_by: user.updated_by,
+        updated_at: user.updated_at.map(|dt| dt.naive_utc()),
         status: user.status,
     }
 }
@@ -26,9 +27,9 @@ pub fn model_to_user(model: &UserModel) -> User {
         email: model.email.clone(),
         password: model.password.clone(),
         created_by: model.created_by,
-        created_at: model.created_at,
-        modified_by: model.modified_by,
-        modified_at: model.modified_at,
+        created_at: DateTime::<Utc>::from_naive_utc_and_offset(model.created_at, Utc),
+        updated_by: model.updated_by,
+        updated_at: model.updated_at.map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc)),
         status: model.status,
     }
 }

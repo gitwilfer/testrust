@@ -1,0 +1,2 @@
+toml[build]
+rustflags = ["-A", "warnings"]

@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse, post, Error};
 use std::sync::Arc;
-use crate::Container::AppState; // Importar AppState
+use crate::Container::app_state::AppState; // Importar AppState
 
 use crate::Application::dtos::auth_dto::LoginDto;
 use crate::Application::use_cases::traits::LoginUseCase;

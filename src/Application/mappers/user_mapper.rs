@@ -23,8 +23,8 @@ impl UserMapper {
             email: entity.email,
             created_by: entity.created_by,
             created_at: entity.created_at,
-            modified_by: entity.modified_by,
-            modified_at: entity.modified_at,
+            updated_by: entity.updated_by,
+            updated_at: entity.updated_at,
             status: entity.status as i32,
         }
     }
@@ -39,9 +39,9 @@ impl UserMapper {
             email: dto.email,
             password: hashed_password,
             created_by: None,
-            created_at: Utc::now().naive_utc(),
-            modified_by: None,
-            modified_at: None,
+            created_at: Utc::now(),
+            updated_by: None,
+            updated_at: None,
             status: 1, // Active por defecto
         })
     }

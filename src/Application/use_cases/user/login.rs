@@ -5,7 +5,8 @@ use std::sync::Arc;
 use crate::Application::dtos::auth_dto::{LoginDto, TokenDto};
 use crate::Application::errors::application_error::ApplicationError;
 // Cambio clave: importar el puerto de consulta en lugar del repositorio general
-use crate::Application::ports::repositories::{UserQueryRepository, AuthServicePort};
+use crate::Application::ports::driven::repositories::UserQueryRepository;
+use crate::Application::ports::driven::AuthServicePort;
 
 pub struct LoginUseCase {
     // Cambio: Usar UserQueryRepository en lugar de UserRepositoryPort

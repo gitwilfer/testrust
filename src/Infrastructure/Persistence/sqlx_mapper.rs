@@ -30,8 +30,8 @@ impl SqlxMapper<User> for UserMapper {
             status: row.try_get("status")?,
             created_by: row.try_get("created_by")?,
             created_at: row.try_get("created_at")?,
-            modified_by: row.try_get("modified_by")?,
-            modified_at: row.try_get("modified_at")?,
+            updated_by: row.try_get("updated_by")?,
+            updated_at: row.try_get("updated_at")?,
         };
         
         Ok(user)
@@ -50,8 +50,8 @@ impl SqlxMapper<Entity> for EntityMapper {
             active: row.try_get("active")?,
             created_at: row.try_get("created_at")?,
             created_by: row.try_get("created_by")?,
-            modified_at: row.try_get("modified_at")?,
-            modified_by: row.try_get("modified_by")?,
+            updated_at: row.try_get("updated_at")?,
+            updated_by: row.try_get("updated_by")?,
             deleted_at: row.try_get("deleted_at")?,
             deleted_by: row.try_get("deleted_by")?,
         };
@@ -72,8 +72,8 @@ impl SqlxMapper<Role> for RoleMapper {
             active: row.try_get("active")?,
             created_at: row.try_get("created_at")?,
             created_by: row.try_get("created_by")?,
-            modified_at: row.try_get("modified_at")?,
-            modified_by: row.try_get("modified_by")?,
+            updated_at: row.try_get("updated_at")?,
+            updated_by: row.try_get("updated_by")?,
             deleted_at: row.try_get("deleted_at")?,
             deleted_by: row.try_get("deleted_by")?,
         };

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use log::debug;
 
 use crate::Application::errors::application_error::ApplicationError;
-use crate::Application::ports::repositories::AuthServicePort;
+use crate::Application::ports::driven::AuthServicePort;
 use crate::Presentation::api::adapters::ErrorAdapter;
 use crate::Infrastructure::auth::auth_service_impl::AuthServiceImpl;
 

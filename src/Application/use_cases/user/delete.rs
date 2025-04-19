@@ -1,40 +1,82 @@
 use crate::Application::errors::application_error::ApplicationError;
-use crate::Application::ports::repositories::UserRepositoryPort;
+// --- Trait Correcto ---
+use crate::Application::ports::driven::repositories::UserCommandRepository;
+// --- UoW ---
+use crate::Application::ports::unit_of_work::{UnitOfWork, RepositoryRegistry};
+// --------------------
 use std::sync::Arc;
 use uuid::Uuid;
+use async_trait::async_trait;
+use anyhow::{Result, Context}; // Usar Result de anyhow internamente
+use log::{info, debug, error}; // Añadir logs
 
-pub struct DeleteUserUseCase {
-    pub user_repository: Arc<dyn UserRepositoryPort>,
+// --- Trait del Caso de Uso (si existe en traits/delete.rs) ---
+#[async_trait]
+pub trait DeleteUserUseCase: Send + Sync {
+    async fn execute(&self, id: Uuid) -> Result<(), ApplicationError>;
+}
+// -----------------------------------------------------------
+
+// Renombrar struct a Impl
+pub struct DeleteUserUseCaseImpl {
+    // --- Dependencias Correctas ---
+    user_command_repository: Arc<dyn UserCommandRepository>,
+    unit_of_work: Arc<dyn UnitOfWork>,
+    // ----------------------------
 }
 
-impl DeleteUserUseCase {
-    pub fn new(user_repository: Arc<dyn UserRepositoryPort>) -> Self {
-        DeleteUserUseCase {
-            user_repository,
+impl DeleteUserUseCaseImpl {
+    pub fn new(
+        // --- Argumentos Correctos ---
+        user_command_repository: Arc<dyn UserCommandRepository>,
+        unit_of_work: Arc<dyn UnitOfWork>,
+        // ----------------------------
+    ) -> Self {
+        // Renombrar struct a Impl
+        DeleteUserUseCaseImpl {
+            user_command_repository,
+            unit_of_work,
         }
     }
 
+    // Mover lógica principal aquí
     pub async fn execute(&self, id: Uuid) -> Result<(), ApplicationError> {
-        // 1. Verificar que el usuario existe
-        let user_exists = self.user_repository.find_by_id(id).await
-            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al buscar usuario: {}", e)))?
-            .is_some();
+        info!("Ejecutando caso de uso DeleteUser: id='{}'", id);
 
-        if !user_exists {
-            return Err(ApplicationError::NotFound(format!("Usuario con ID {} no encontrado", id)));
-        }
+        // --- Ejecutar dentro de UoW ---
+        self.unit_of_work.execute(|registry| async move {
+            debug!("Dentro de UoW para eliminar usuario: {}", id);
+            let cmd_repo = registry.user_command_repository();
+            let conn = registry.get_diesel_async_conn();
 
-        // 2. Eliminar usuario
-        self.user_repository.delete(id).await
-            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al eliminar el usuario: {}", e)))?;
+            // Llamar al método delete pasando la conexión.
+            // El repo devuelve Result<()>, que incluye error si no se encuentra.
+            cmd_repo.delete(conn, id).await
+                .context(format!("Failed to delete user {} within Unit of Work", id))?; // Usar Result de anyhow
 
-        // 3. Devolver éxito
+            debug!("Usuario eliminado en BD (dentro de UoW): {}", id);
+            Ok(()) // Devolver Ok(()) si la operación fue exitosa dentro de la UoW
+        })
+        .await // Esperar a que la UoW termine
+        .map_err(|e| { // Mapear error de UoW a ApplicationError
+            error!("Error durante la Unidad de Trabajo al eliminar usuario {}: {:?}", id, e);
+            // Intentar detectar si el error original fue "NotFound"
+            if e.to_string().contains("no encontrado para eliminar") {
+                 ApplicationError::NotFound(format!("Usuario con ID {} no encontrado para eliminar", id))
+            } else {
+                 ApplicationError::InfrastructureError(format!("Error en transacción al eliminar usuario: {}", e))
+            }
+        })?;
+        // -----------------------------------------
+
+        info!("Caso de uso DeleteUser completado exitosamente para ID: {}", id);
         Ok(())
     }
 }
 
-#[async_trait::async_trait]
-impl crate::Application::use_cases::traits::DeleteUserUseCase for DeleteUserUseCase {
+// Implementar el trait (si existe)
+#[async_trait]
+impl crate::Application::use_cases::traits::DeleteUserUseCase for DeleteUserUseCaseImpl {
     async fn execute(&self, id: Uuid) -> Result<(), ApplicationError> {
         self.execute(id).await
     }

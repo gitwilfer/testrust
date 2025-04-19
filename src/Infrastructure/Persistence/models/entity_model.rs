@@ -1,5 +1,4 @@
-// src/infrastructure/persistence/models/entity_model.rs
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use diesel::prelude::*;
 use crate::Infrastructure::Persistence::schema::entidades;
@@ -20,16 +19,18 @@ pub struct EntityModel {
     pub active: bool,
     
     #[diesel(column_name = fecha_creacion)]
-    pub created_at: NaiveDateTime,
+    #[diesel(skip_insertion)]
+    pub created_at: DateTime<Utc>,
     
     #[diesel(column_name = creado_por)]
     pub created_by: Option<Uuid>,
     
     #[diesel(column_name = fecha_modificacion)]
-    pub modified_at: Option<NaiveDateTime>,
+    #[diesel(skip_insertion)]
+    pub updated_at: Option<DateTime<Utc>>,
     
     #[diesel(column_name = modificado_por)]
-    pub modified_by: Option<Uuid>,
+    pub updated_by: Option<Uuid>,
 }
 
 // Mapper para convertir entre modelos de persistencia y entidades de dominio
@@ -46,8 +47,8 @@ pub mod mapper {
             active: entity.active,
             created_at: entity.created_at,
             created_by: entity.created_by,
-            modified_at: entity.modified_at,
-            modified_by: entity.modified_by,
+            updated_at: entity.updated_at,
+            updated_by: entity.updated_by,
         }
     }
     
@@ -60,8 +61,8 @@ pub mod mapper {
             active: model.active,
             created_at: model.created_at,
             created_by: model.created_by,
-            modified_at: model.modified_at,
-            modified_by: model.modified_by,
+            updated_at: model.updated_at,
+            updated_by: model.updated_by,
         }
     }
 }

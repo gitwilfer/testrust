@@ -1,43 +1,70 @@
 use crate::Application::dtos::user_dto::UserResponseDto;
 use crate::Application::errors::application_error::ApplicationError;
 use crate::Application::mappers::user_mapper::UserMapper;
-use crate::Application::ports::repositories::UserRepositoryPort;
+// --- Trait Correcto ---
+use crate::Application::ports::driven::repositories::UserQueryRepository;
+// --- ELIMINADO: UserRepositoryPort ---
+// use crate::Application::ports::driven::repositories::UserRepositoryPort;
+// --------------------
 use std::sync::Arc;
+use async_trait::async_trait; // Añadir si falta
+use anyhow::Context; // Añadir Context
+use log::info; // Añadir log
 
-pub struct FindAllUsersUseCase {
-    pub user_repository: Arc<dyn UserRepositoryPort>,
-    pub user_mapper: Arc<UserMapper>,
+// --- Trait del Caso de Uso (si existe en traits/find_all.rs) ---
+#[async_trait]
+pub trait FindAllUsersUseCase: Send + Sync {
+    async fn execute(&self) -> Result<Vec<UserResponseDto>, ApplicationError>;
+}
+// ------------------------------------------------------------
+
+// Renombrar struct a Impl
+pub struct FindAllUsersUseCaseImpl {
+    // --- Dependencia Correcta ---
+    user_query_repository: Arc<dyn UserQueryRepository>,
+    // ----------------------------
+    user_mapper: Arc<UserMapper>,
 }
 
-impl FindAllUsersUseCase {
+impl FindAllUsersUseCaseImpl {
     pub fn new(
-        user_repository: Arc<dyn UserRepositoryPort>,
+        // --- Argumento Correcto ---
+        user_query_repository: Arc<dyn UserQueryRepository>,
+        // ----------------------------
         user_mapper: Arc<UserMapper>,
     ) -> Self {
-        FindAllUsersUseCase {
-            user_repository,
+        // Renombrar struct a Impl
+        FindAllUsersUseCaseImpl {
+            user_query_repository,
             user_mapper,
         }
     }
 
+    // Mover lógica principal aquí
     pub async fn execute(&self) -> Result<Vec<UserResponseDto>, ApplicationError> {
-        // 1. Obtener todos los usuarios del repositorio
-        let users = self.user_repository.find_all().await
-            .map_err(|e| ApplicationError::InfrastructureError(format!("Error al obtener usuarios: {}", e)))?;
-    
-        // 2. Mapear cada usuario a un DTO usando el mapper
+        info!("Ejecutando caso de uso FindAllUsers");
+        // Obtener todos los usuarios del repositorio de CONSULTA
+        let users = self.user_query_repository // <-- Usar el repo correcto
+            .find_all()
+            .await
+            .context("Error al obtener todos los usuarios") // Usar anyhow::Context
+            .map_err(|e| ApplicationError::InfrastructureError(e.to_string()))?; // Mapear a ApplicationError
+
+        info!("Encontrados {} usuarios", users.len());
+        // Mapear cada usuario a un DTO usando el mapper
         let user_dtos = users
             .into_iter()
             .map(|user| self.user_mapper.to_dto(user))
             .collect();
-    
-        // 3. Devolver la lista de DTOs
+
+        // Devolver la lista de DTOs
         Ok(user_dtos)
     }
 }
 
-#[async_trait::async_trait]
-impl crate::Application::use_cases::traits::FindAllUsersUseCase for FindAllUsersUseCase {
+// Implementar el trait (si existe)
+#[async_trait]
+impl crate::Application::use_cases::traits::FindAllUsersUseCase for FindAllUsersUseCaseImpl {
     async fn execute(&self) -> Result<Vec<UserResponseDto>, ApplicationError> {
         self.execute().await
     }

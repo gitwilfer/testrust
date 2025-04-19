@@ -1,0 +1,406 @@
+
+
+Introducción - EAV Para Tablas Parametricas
+
+Bienvenido al equipo de desarrollo. En este informe, te explicaré detalladamente el modelo de datos dinámico que hemos definido para almacenar información de manera flexible y adaptable. Este modelo es crucial para nuestro sistema, y es importante que lo entiendas bien para implementarlo correctamente.
+
+El modelo de datos dinámico se basa en una estructura de datos que permite almacenar información de manera flexible y adaptable. La estructura se compone de las siguientes partes:
+
+Para la documentación simularemos el maestro de articulos de una tienda.
+
+Modelo de datos dinámico, se encuentra en src\database_schema.sql, esta documentado si se requiere explicacion
+		no dude en consultarlo
+		
+Ejemplo de Entrada de informacion por parte del usuario de nivel tecnico, definiendo la tabla de Maestro_Articulos
+
+	Nueva tabla
+		{"Entity": "Maestro_Articulos"
+		 "Attribute": {
+		   [{"name":"compania",
+			"description": "Almacena el Codigo de la Compania, para este item",
+			"data_type_id": "VARCHAR",
+			"position": "1",
+			"is_required": "True",
+			"is_unique":"1"}
+			{"name":"codigo",
+			"description": "Almacena el codigo del Producto",
+			"data_type_id": "VARCHAR",
+			"is_required": "True",
+			"position": "2",
+			"is_unique":"1"},
+			{"name":"nombre",
+			"position"; "3"
+			"is_required": "True",
+			"data_type_id":"VARCHAR"},
+			{"name":"costo",
+			"data_type_id":"DECIMAL",
+			"is_required": "True",
+			"position": "4"},
+			{"name":"linea",
+			"data_type_id":"VARCHAR",
+			"is_required": "True",
+			"position": 5"},
+			{"name":"familia",
+			"data_type_id":"VARCHAR",
+			"is_required": "True",
+			"position": "6"},
+			{"name":"fecha_vencimiento",
+			"data_type_id":"DATETIME",
+			"position": "7"},
+			{"name":"imagen",
+			"data_type_id":"Imagen",
+			"position": "8"}]
+		 }
+		}
+		
+	De este Ejemplo podemos aprender que:
+			Ingresa Informacion en las tablas de Entidades y Atributos, del campo data_type_id
+			recupera el ID de la tabla Tipos_Datos, para almacenar en Atributos.
+			
+	Evento de Create:
+			1 Ningun Campo puede llegar Vacio
+			2 El is_unique no puede tener valores negativos, ni superior a 10
+			3 El Campo position, no puede tener valores superiores a 100, ni negativos
+			4 Valores en data_type_id, este valor debe estar registrado en
+					data_types.name
+					
+			5 Registrar vista si este campo assign_view es true para la Entidad, para esta nueva tabla logica quede con este patron de nombre:
+				view + NOMBRE TABLA LOGICA,  para el ejemplo es 
+					view_Maestro_Articulos y quede para consultar de la siguiente manera:
+					
+				select compania,codigo,nombre,costo,linea,familia,fecha_vencimiento,imagen,
+				creado_por,fecha_creacion,modificado_por,fecha_modificacion,id
+				from view_Maestro_Articulos
+				
+				 Como debes generar la vista anterior
+					 * estos campos "compania,codigo,nombre,costo,linea,familia,fecha_vencimiento,
+					 image" proviene de la definicion de Attribute, en el campo name, y el valor para este campo
+					 lo encuentra en la tabla attribute_values de acuerdo al tipo que se definio en data_type_id.
+					 debes seguir el modelo de datos para llegar a attribute_values
+
+					* estos campos "creado_por,fecha_creacion,modificado_por,fecha_modificacion,
+					id" provienen de la tabla Tuplas
+					
+					Nota: 
+					    * No sobra indicar que los Datos que muestre la Vista, pertenecen 
+							exclusivamente al view_Maestro_Articulos, tener cuidado en la preparacion de la Vista.
+					    * el orden de los campos, lo da el valor en position en cada definicion
+							del campo logico.
+						* si le queda duda en la composicion de la Vista, debera solicitar ayuda.
+				
+				
+	Evento de Update:
+			1 el Campo Entity, Contenga una tabla definida previamente en Entidades.nombre_entidad 
+			2 Solo se permite la modificacion para los campos:
+						- description
+						- position: Aplica la misma regla que se aplica en el create
+						- is_unique: Aplica la misma regla que se aplica en el create
+						- default_value
+						- validation_regex
+						- is_required : si su nuevo Valor es TRUE debe validar que los demas valores para este
+										campo, eje: name="linea" de la tabla Maestro_Articulos tengan informacion
+										para tener consistencia de la informacion.
+			3 Para el Caso del Campo is_unique, aqui se aplican más reglas y son:
+				- si el nuevo valor es Null y antes tenia un valor, identificar los campos logicos
+						de la Entity "Maestro_Articulos" que quedan con el valor que tenia
+						is_unique y aplicar la Validación_update.
+					
+				- si hay nuevo valor, identificar los campos logicos de la Entity
+						"Maestro_Articulos", que comparten el mismo valor diferente de NULL en
+						is_unique y aplicar la Validación_update.
+					
+				- Validación_update
+					ya con estos campos, validar la unicidad de los datos de los datos, esta se puede
+					hacer sobre la vista view_maestro_articulos ejemplo:
+							select distinct compania,codigo count(1) conteo from view_maestro_articulos
+								group by compania,codigo
+								having conteo > 1
+						si la anterior consulta entrega resultados indica que no se puede permitir el
+							update para el registro que se este procesando.
+			4 Si el valor de "name" campo no esta registrado en Attribute y diferente de Null,
+					se procede a registrar realizando las validaciones del evento create, 
+					en los campos data_type_id,is_unique,position.
+					
+				 Nota: ahora con este campo Nuevo procedemos a recrear la view_Maestro_Articulos
+					 si el campo assign_view lo indica pertinente 
+					
+	Nota, para esta sesión los mensajes van dirijidos a personal tecnico, y no es concebible
+		  errores basicos, "huyyy ha caido bajo al tratar de hacerme este gol" y asi sucesivamente
+		  inspirate para mensajes graciosos ó frases que identifiquen diferentes regiones de
+		  colombia, indicando igualmente el error.
+			
+
+	Ejemplo de Entrada de informacion por parte del usuario final, en la tabla de Maestro_Articulos,
+	nuevo endpoint
+		
+			{"Entity": "Maestro_Articulos"
+			 "Attribute":{
+				[	{
+					"compania" : "X",
+					"codigo" : "PICKUP",
+					"nombre" : "CAMIONETA PICKUP",
+					"costo" : 1000,
+					"linea" : "AUTOS",
+					"familia" : "TESLA"
+					},
+					{
+					"compania":"X",
+					"codigo":"SEDAN",
+					"nombre":"CAMIONETA SEDAN",
+					"costo": 1000,
+					"linea":"AUTOS",
+					"familia":"TESLA"
+					}
+				]}
+			}
+	Evento de Create:
+		De este ejemplo se deduce que:
+		
+		1	Validar que la tabla logica Maestro_Articulos debe estar definida previamente
+		
+		2   Recuperar un listado de Campos logicos definidos en Attribute para "Maestro_Articulos",
+				y sus caracteristicas propias del campo logico y llaremos masterAtrtribute
+		
+		3   para "Attribute" de json, Cada Campo que este presente en los Json de los Subarrays del arreglo,
+				debera estar presente en masterAtrtribute
+				Ejemplo: Campos que estan en el masterAtrtribute en su propuiedad name:
+						["compania","codigo","nombre","costo","linea","familia","fecha_vencimiento","imagen"]
+				Campos Recepcionados en la peticion:
+						["compania","codigo","nombre","costo","linea","familia"]
+				En este Caso todo esta Correcto
+		
+		4	Del masterAtrtribute identificar cuales campos logicos tienen valor por defecto "default_value",
+				Ahora buscar en cada subarray de "Attribute": y identificar que campos no llegaron, se procede
+				a agregar al Array el campo logico con el valor por Defecto, tener presente el comentario en
+				default_value, ya que requiere un parseo si es necesario.
+		
+		5	Del masterAtrtribute identificar cuales campos logicos tienen validacion "validation_regex",
+				se debe aplicar esta regla de a los campos que se encuentra en cada subArray a insertar
+				
+		6 	Del masterAtrtribute identificar cuales campos logicos is_required=True, este listado resultante
+				debe estar contenido en cada uno en cada subArray de "Attribute":
+				Ejemplo: Definicion de los Campos:
+						["compania","codigo","nombre","costo","linea","familia"]
+				Campos Recepcionados en la peticion:
+						["compania","codigo","nombre","costo","linea","familia"]
+				En este Caso todo esta Correcto
+
+		7	El valor para cada campo, sea del tipo que tiene cada campo parametrizado,
+			Attribute.data_type_id y de aqui se llega a data_types.name de este
+				ultimo campo solo describe Decimal, y el dato de "Costo": 1000 se debe validar
+				que se pueda almacenar en un campo Decimal.
+				
+		8	Validando que los valores de algunos de nuestros campos logicos, si estan relacionados en 
+				entity_relationships ó physical_table_mappings, debe apoyarse en el modelo relacional y 
+				preparar las diferentes consultas que pueden llegar a suceder, para este punto debe ser cuidadoso
+					* cualquier valor de mi registro nuevo depende de otra entidad ya sea logica o fisica.
+
+		9	del masterAtrtribute agrupar por el campo is_unique, dando como resultado, un solo campo o n-campos.
+			estos hacen de campos unicos en la tabla logica,
+			similar a un unique de una base de datos en una tabla, cada campo y/o pareja el(los) nuevo(s) valor(es) del registro a insertar no puede estar en la Base de Datos,	ni repertise en el array 
+			de json que se recibe para insertar.
+				Ejemplo:
+					Registros en la Base de Datos, para eso es la vista view_Maestro_Articulos
+					CAMPOS:     compania,codigo,nombre,costo,linea,familia,fecha_vencimiento
+					Registro 1:     X,PICKUP,CAMIONETA PICKUP,1000,AUTOS,TESLA,null
+						Asumiendo que ya esta este registro en la base de datos,
+			
+			la recuperacion propuesta en este punto debe de dar como resultado "compania,codigo"
+			ahora se valida el registro que se esta recibiendo en el array y el primer registo
+			esta tratando de almacenar para compania="X" y codigo="PICKUP", en este punto
+			se debe de generar error de llave duplicada y se indica cual es.
+			
+		Nota. cabe destacar que todos los puntos son de validacion y cualquier validacion que no
+				se cumpla, debe generar error e informar el motivo y su contextualizacion.
+			
+	
+
+	Evento de Update:
+		Ejemplo de Entrada de Actualizacion por parte del usuario final, en la tabla de Maestro_Articulos,
+
+				{"Entity": "Maestro_Articulos"
+				 "Attribute":{
+					[[{"updateFields" :{"nombre":"CAMIONETA PICKUP V2",
+										"linea":"AUTOS",
+										"familia":"TESLA"},
+					  "filters": {
+						"compania":{"eq": "X"},    // Filtrar por compania = 'X'
+						"costo":{"gte": 50.0 },   // Filtrar por costo >= 50.0
+						"codigo":{"contains":"PICKUP"}// Filtrar por codigo que contenga "PICKUP"
+						//Operadores a soportar (eq,neq,gt,gte,lt,lte, contains, startsWith, etc.)
+					  }}],
+					  [{"updateFields" :{"nombre":"CAMIONETA SEDAN V2",
+										"linea":"AUTOS",
+										"familia":"TESLA"},
+					  "filters": {
+						"compania":{"eq": "X"}, // Filtrar por compania = 'X'
+						"costo":{"gte": 50.0 },        // Filtrar por costo >= 50.0
+						"codigo":{"eq":"SEDAN"}// Filtrar por codigo = "SEDAN"
+						//Operadores a soportar (eq,neq,gt,gte,lt,lte, contains, startsWith, etc.)
+					  }}]
+					]}
+				}
+			
+		1	Validar que "Entity": "Maestro_Articulos" tabla logica Maestro_Articulos debe estar definida previamente
+		
+		2   Recuperar un listado de Campos logicos definidos en Attribute para "Maestro_Articulos",
+				y sus caracteristicas propias del campo logico y llaremos masterAtrtribute
+		
+		3	para el Campo "Attribute" de Json, ahora llega un array de arrays, vamos a comprederlo
+			a. el primer elemento del array principal es un array, ahora entendamos este array
+				a1. llegan 2 Campos updateFields y filters casi que hablan pos si solos.
+					updateFields Campos a actualizar con su respectivo nuevo Valor
+					filters Campos que serviran de filtros con su respectivo operador y Valor
+							a aplicar en la busqueda
+
+		
+		4   con el masterAtrtribute, validar que todos los campos referenciados en updateFields y filters
+			esten contenidos en masterAtrtribute, en su atributo "name" 
+				Ejemplo: Definicion de los Campos:
+						["compania","codigo","nombre","costo","linea","familia",
+										"fecha_vencimiento","imagen"]
+				Campos Recepcionados en la peticion:
+						["nombre","linea","familia","compania","codigo","costo"]
+				En este Caso todo esta Correcto
+						
+		5	con el masterAtrtribute los Campos logicos que sean is_required=True, si estan en updateFields, estos
+			tengan Valores, no puede ser Null.
+				Ejemplo: Definicion de los Campos:
+						["compania","codigo","nombre","costo","linea","familia"]
+				Campos Recepcionados en la peticion:
+						["nombre","linea","familia","compania","codigo"]
+				En este Caso todo esta Correcto
+				
+				5.1 Te enseñare unos 2 casos de Error
+					En Json Original-Ejemplo que esta bien nos llega "familia":"TESLA"
+					* Simulamos que llega "familia":"", Aqui hay error, pues no llega valor,
+						en la definicion del campo familia su atributo is_required es TRUE
+					* Simulamos que llega "familiaX":"TESLA", el campo logico familiaX no Existe
+
+		6	Del masterAtrtribute identificar cuales campos logicos tienen validacion "validation_regex",
+				se debe aplicar esta regla de a los campos que estan en updateFields de cada Subarray
+
+		7	El valor para cada campo, sea del tipo que tiene cada campo parametrizado,
+					Attribute.data_type_id y de aqui se llega a data_types.name de este
+						ultimo campo solo describe Decimal, y el dato de "Costo": 1000 se debe validar
+						que se pueda almacenar en un campo Decimal, si el campo su valor llega en Null
+				obviamente no se debe validar.
+				7.1 Te enseño casos de Error
+					En Json Original-Ejemplo que esta bien nos llega "Costo": 1000
+					* Simulemos que llega "Costo": "1000J", Aqui hay error ya que la definicion
+						del campo Costo es de tipo Decimal.
+
+		8	Validando que los valores de algunos de nuestros campos logicos, si estan relacionados en 
+				entity_relationships ó physical_table_mappings, debe apoyarse en el modelo relacional y 
+				preparar las diferentes consultas que pueden llegar a suceder, para este punto debe ser cuidadoso
+					* cualquier valor de mi registro nuevo depende de otra entidad ya sea logica o fisica.
+					
+		9	del masterAtrtribute agrupar por el campo is_unique, dando como resultado, un solo campo o n-campos.
+			estos hacen de campos unicos en la tabla logica,
+			similar a un unique de una base de datos en una tabla, cada campo y/o pareja el(los) nuevo(s) valor(es) del registro a insertar no puede estar en la Base de Datos,	ni repertise en el array 
+			de json que se recibe para insertar.
+				Ejemplo:
+					Registros en la Base de Datos, para eso es la vista view_Maestro_Articulos
+					CAMPOS:     compania,codigo,nombre,costo,linea,familia,fecha_vencimiento
+					Registro 1:     X,PICKUP,CAMIONETA PICKUP,1000,AUTOS,TESLA,null
+						Asumiendo que ya esta este registro en la base de datos,
+			
+			la recuperacion propuesta en este punto debe de dar como resultado "compania,codigo"
+			ahora se valida el registro que se esta recibiendo en el array y el primer registo
+			esta tratando de almacenar para compania="X" y codigo="PICKUP", en este punto
+			se debe de generar error de llave duplicada y se indica cual es.
+
+
+	Evento Consulta- Un buen amigo me ayudo para este tema, te lo facilito tal cual me lo paso y me dejo Notas
+	
+		EndPoint Generico de Consultas para Tablas Logicas Parametricas
+		// Propuesta de JSON para la consulta (Ej: POST /api/parametric/query)
+
+		{
+		  // 1. Identificación de la Tabla Lógica
+		  "entityName": "Maestro_Articulos", // Nombre único de la entidad a consultar
+
+		  // 2. Campos a Recuperar (¡NUEVO y Explícito!)
+		  "selectFields": [ // Array opcional de nombres de atributos a devolver
+			"compania",
+			"codigo",
+			"nombre",
+			"costo",
+			"fecha_creacion"
+		  ],
+		   Default: "selectFields" se omite o está vacío, se devuelven todos los atributos más 
+				Tuplas.IDX_tupla,Tuplas.creado_por="el Nombre en Usuario",Tuplas.fecha_creacion,
+				Tuplas.modificado_por="el Nombre en Usuario" Si hay Dato Informacion
+				Tuplas.fecha_modificacion
+
+		  // 3. Filtros
+		  "filters": {
+			"familia": { "eq": "ACCESORIOS" }, // Filtrar por familia = 'ACCESORIOS'
+			"costo": { "gte": 50.0 },         // Filtrar por costo >= 50.0
+			"nombre": { "contains": "Tornillo"} // Filtrar por nombre que contenga "Tornillo"
+			// Se necesitaría definir los operadores soportados (eq, neq, gt, gte, lt, lte, contains, startsWith, etc.)
+		  },
+
+		  // 4. Ordenamiento (Como antes, con IDX_tupla como tie-breaker)
+		  "sort": [
+			{ "field": "nombre", "direction": "asc" },
+			{ "field": "IDX_tupla", "direction": "asc" } // Tie-breaker esencial
+		  ],
+
+		  // 5. Keyset para Paginación
+		  "keyset": { // Valores del último elemento de la página anterior, coincidiendo con 'sort'
+			"nombre": "Tornillo Zincado 1/4",
+			"IDX_tupla": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+		  },
+		  // Si "keyset" se omite, se solicita la primera página.
+
+		  "pageSize": 20
+		}
+
+		¡Hey! Qué bueno que ya tienes el JSON para las consultas a las tablas dinámicas. Te explico rápido cómo usarlo para que saques el jugo a la implementación:
+
+		entityName: Lo primero, dile a qué "tabla" dinámica quieres consultar. Aquí pones el nombre exacto, como "Maestro_Articulos". ¡Fácil!
+
+		selectFields: Aquí le dices qué "columnas" (atributos) quieres que te devuelva. Es un array de strings con los nombres: ["codigo", "nombre", "costo"]. Pide solo lo que necesites para que vaya más rápido. Si lo omites, Aplica el Default que se indico para selectFields
+
+		filters: Para filtrar los resultados. Es un objeto. Cada clave es el nombre del atributo por el que filtras (ej: "familia"), y el valor es otro objeto que dice cómo filtrar ("eq": igual, "gte": mayor o igual, "contains": contiene, etc.) y el valor a buscar. Ejemplo: {"familia": {"eq": "ACCESORIOS"}, "costo": {"gte": 50.0}}.
+
+		sort: Para ordenar. Es un array de objetos. Cada uno tiene "field" (el atributo por el que ordenar) y "direction" ("asc" o "desc"). ¡Importante! Siempre, como último elemento del array sort, añade el orden por el ID único de la fila: { "field": "IDX_tupla", "direction": "asc" }. Esto es crucial para que la paginación funcione perfecto, ¡no te lo saltes!
+
+		pageSize y keyset (La Paginación Mágica):
+
+		pageSize: Cuántos resultados quieres por página (ej: 20).
+		keyset: Aquí está el truco para pedir la página siguiente.
+		Primera página: No envíes keyset o envíalo nulo/vacío.
+		Siguientes páginas: Necesitas los valores del último registro que recibiste en la página anterior. En keyset, pones un objeto donde las claves son los mismos "field" que usaste en sort, y los valores son los de ese último registro. Si ordenaste por nombre (asc) y IDX_tupla (asc), y el último fue { "nombre": "Tuerca", "IDX_tupla": "uuid-xyz" }, tu keyset para la siguiente página será { "nombre": "Tuerca", "IDX_tupla": "uuid-xyz" }.
+		En resumen: Tú armas este JSON diciendo qué tabla, qué columnas, cómo filtrar, cómo ordenar (¡con IDX_tupla al final!) y, si no es la primera página, desde dónde continuar (keyset). El backend se encarga de la magia de buscar en el modelo EAV y devolverte justo lo que pediste.
+
+		¡Listo! Con eso ya deberías poder armar tus consultas. Si algo no queda claro o te topas con un caso raro, ¡me avisas y lo vemos juntos!
+
+
+Notas Generales
+
+Es importante que revises en que partes del proceso podemos incluir el manejo de memoria cache, que tal un redis
+
+Revisar los objetos que representan el esquema de la base de datos, algunos ya estan como lo es el user, esta
+entidad ya tiene su funcionalidad CRUD funcional, deberiamos guiarnos en lo que podamos de ahi, para mantener
+una filosofia de desarrollo igual
+	* Las Operadores que implican transaccionalidad lo hacemos con Dieesel
+	* Las operaciones de solo Consulta las hacemos con Sqlx
+	
+
+el actual sistema sigue arquitectura DDD, Clean code, Solid y Patrones en varios puntos, se debe seguir la filosofia del actual proyecto.
+
+este desarrollo es para aplicar en el actual desarrollo, las entidades de movimientos y alto espacio de almacenamiento tendran su propio modelo.
+
+echame una mano haber si encuentra alguna inconsistencia que se me haya pasado en la redacion de este documento.
+
+
+hablemos las fases para implementar inicialmente el evento create de tablas logicas, y lo que se desarrolle debe
+quedar facil de acoplar con las demas tareas pendientes, como update de tablas logicas, y para el usuario final
+las 3 eventos, create,update,consulta
+
+deseo una separacion clara del nuevo desarrollo, al ya existente de user y login, siempre pero siempre debemos segir SOLID,clean arquitectura y DDD, no olvidar buenos patrones de diseño
+
+hablemos en español
+

@@ -5,4 +5,3 @@ pub mod Infrastructure; // Corregir capitalización
 pub mod Application;    // Corregir capitalización
 pub mod Presentation;   // Corregir capitalización
 pub mod Container;      // Mantener minúscula (coincide con container.rs)
-pub mod Factory;

@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use std::sync::Arc;
 
-use crate::Application::ports::repositories::AuthServicePort;
+use crate::Application::ports::driven::AuthServicePort;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {

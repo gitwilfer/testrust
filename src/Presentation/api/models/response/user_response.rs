@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -14,8 +14,8 @@ pub struct UserResponse {
     pub last_name: String,
     pub email: String,
     pub created_by: Option<Uuid>,
-    pub created_at: NaiveDateTime,
-    pub modified_by: Option<Uuid>,
-    pub modified_at: Option<NaiveDateTime>,
+    pub created_at: DateTime<Utc>,
+    pub updated_by: Option<Uuid>,
+    pub updated_at: Option<DateTime<Utc>>,
     pub status: i32,
 }

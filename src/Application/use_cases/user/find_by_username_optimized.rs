@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::Application::dtos::user_dto::UserResponseDto;
 use crate::Application::errors::application_error::ApplicationError;
 use crate::Application::mappers::user_mapper::UserMapper;
-use crate::Application::ports::repositories::UserQueryRepository;
+use crate::Application::ports::driven::repositories::UserQueryRepository;
 use crate::Application::use_cases::traits::FindUserByUsernameUseCase;
 
 // ⭐ Caso de uso optimizado que utiliza directamente el repositorio de consulta

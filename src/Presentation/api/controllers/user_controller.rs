@@ -1,5 +1,5 @@
 use actix_web::{web, HttpResponse, post, get, put, delete, Error};
-use crate::Container::AppState; // Importar AppState
+use crate::Container::app_state::AppState; // Importar AppState
 use crate::Application::use_cases::{
     CreateUserUseCase, 
     FindUserByIdUseCase, 
@@ -84,8 +84,8 @@ async fn create_user(
                 email: user_dto.email,
                 created_by: user_dto.created_by,
                 created_at: user_dto.created_at,
-                modified_by: user_dto.modified_by,
-                modified_at: user_dto.modified_at,
+                updated_by: user_dto.updated_by,
+                updated_at: user_dto.updated_at,
                 status: user_dto.status,
             };
             
@@ -121,8 +121,8 @@ async fn find_user_by_id(
                 email: user_dto.email,
                 created_by: user_dto.created_by,
                 created_at: user_dto.created_at,
-                modified_by: user_dto.modified_by,
-                modified_at: user_dto.modified_at,
+                updated_by: user_dto.updated_by,
+                updated_at: user_dto.updated_at,
                 status: user_dto.status,
             };
             
@@ -158,8 +158,8 @@ async fn find_user_by_username(
                 email: user_dto.email,
                 created_by: user_dto.created_by,
                 created_at: user_dto.created_at,
-                modified_by: user_dto.modified_by,
-                modified_at: user_dto.modified_at,
+                updated_by: user_dto.updated_by,
+                updated_at: user_dto.updated_at,
                 status: user_dto.status,
             };
             
@@ -195,8 +195,8 @@ async fn find_all_users(
                     email: user_dto.email,
                     created_by: user_dto.created_by,
                     created_at: user_dto.created_at,
-                    modified_by: user_dto.modified_by,
-                    modified_at: user_dto.modified_at,
+                    updated_by: user_dto.updated_by,
+                    updated_at: user_dto.updated_at,
                     status: user_dto.status,
                 })
                 .collect();
@@ -246,8 +246,8 @@ async fn update_user(
                 email: user_dto.email,
                 created_by: user_dto.created_by,
                 created_at: user_dto.created_at,
-                modified_by: user_dto.modified_by,
-                modified_at: user_dto.modified_at,
+                updated_by: user_dto.updated_by,
+                updated_at: user_dto.updated_at,
                 status: user_dto.status,
             };
             

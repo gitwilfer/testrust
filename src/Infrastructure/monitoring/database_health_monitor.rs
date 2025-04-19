@@ -2,11 +2,10 @@ use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::interval;
-use log::{info, warn, error};
+use log::{info, warn, error, debug};
 use std::collections::HashMap;
 
-use crate::Infrastructure::Persistence::database;
-use crate::Infrastructure::Persistence::sqlx_database;
+use crate::Infrastructure::Persistence::connection_pools;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseHealth {
@@ -49,16 +48,11 @@ impl DatabaseHealthMonitor {
                 let now = chrono::Utc::now();
                 
                 // Verificar salud de Diesel de manera segura
-                // Clonamos para evitar capturar referencias
-                let diesel_health = database::check_database_health().clone();
-                
-                // Verificar salud de SQLx
-                // La función ya ha sido corregida para ser segura
-                let sqlx_health = match sqlx_database::check_database_health().await {
+                let combined_health = match connection_pools::check_pools_health().await {
                     Ok(health) => health,
                     Err(e) => {
-                        error!("Error al verificar salud de bases de datos SQLx: {}", e);
-                        HashMap::new()
+                        error!("Error al verificar salud de todos los pools: {}", e);
+                        HashMap::new() // Devuelve vacío si falla la verificación general
                     }
                 };
                 
@@ -66,32 +60,18 @@ impl DatabaseHealthMonitor {
                 let mut health_entries = Vec::new();
                 
                 // Procesar resultados Diesel
-                for (name, healthy) in diesel_health {
+                for (full_name, healthy) in combined_health {
+                    // Calcular tiempo aquí puede ser menos preciso si hubo muchos checks
                     let response_time = start.elapsed().as_millis() as u64;
                     health_entries.push(DatabaseHealth {
-                        name: format!("diesel_{}", name),
+                        name: full_name.clone(), // El nombre ya incluye prefijo (ej: "sqlx_main")
                         healthy,
                         last_check: now,
                         response_time_ms: response_time,
                     });
-                    
+
                     if !healthy {
-                        warn!("Base de datos Diesel {} no está saludable", name);
-                    }
-                }
-                
-                // Procesar resultados SQLx
-                for (name, healthy) in sqlx_health {
-                    let response_time = start.elapsed().as_millis() as u64;
-                    health_entries.push(DatabaseHealth {
-                        name: format!("sqlx_{}", name),
-                        healthy,
-                        last_check: now,
-                        response_time_ms: response_time,
-                    });
-                    
-                    if !healthy {
-                        warn!("Base de datos SQLx {} no está saludable", name);
+                        warn!("Pool {} no está saludable", full_name);
                     }
                 }
                 

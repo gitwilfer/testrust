@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse, get, Error};
 use std::sync::Arc;
-use crate::Container::AppState; // Importar AppState
+use crate::Container::app_state::AppState; // Importar AppState
 
 use crate::Infrastructure::monitoring::database_health_monitor::DatabaseHealthMonitor;
 

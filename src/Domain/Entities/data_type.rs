@@ -8,7 +8,7 @@ pub struct DataType {
     pub description: Option<String>,
     pub created_by: Uuid,
     pub created_at: DateTime<Utc>,
-    pub modified_by: Option<Uuid>,
-    pub modified_at: Option<DateTime<Utc>>,
+    pub updated_by: Option<Uuid>,
+    pub updated_at: Option<DateTime<Utc>>,
     pub status: i16,
 }

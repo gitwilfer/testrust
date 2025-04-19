@@ -1,5 +1,5 @@
 // src/domain/entities/user.rs
-use chrono::{NaiveDateTime, Utc};
+use chrono::{NaiveDateTime, Utc, DateTime};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use anyhow::{Result, anyhow};
@@ -48,10 +48,10 @@ pub struct User {
     pub email: String,
     pub password: String,
     pub status: i16,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
     pub created_by: Option<Uuid>,
-    pub modified_at: Option<NaiveDateTime>,
-    pub modified_by: Option<Uuid>
+    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_by: Option<Uuid>
 }
 
 impl User {
@@ -94,48 +94,48 @@ impl User {
             email,
             password,
             status: UserStatus::Active as i16, // Activo por defecto
-            created_at: Utc::now().naive_utc(),
+            created_at: Utc::now(),
             created_by,
-            modified_at: None,
-            modified_by: None,
+            updated_at: None,
+            updated_by: None,
         })
     }
     
     // Método para activar el usuario
-    pub fn activate(&mut self, modified_by: Option<Uuid>) -> Result<()> {
+    pub fn activate(&mut self, updated_by: Option<Uuid>) -> Result<()> {
         if self.get_status() == UserStatus::Active {
             return Err(anyhow!("El usuario ya está activo"));
         }
         
         self.status = UserStatus::Active as i16;
-        self.modified_at = Some(Utc::now().naive_utc());
-        self.modified_by = modified_by;
+        self.updated_at = Some(Utc::now());
+        self.updated_by = updated_by;
         
         Ok(())
     }
     
     // Método para desactivar el usuario
-    pub fn deactivate(&mut self, modified_by: Option<Uuid>) -> Result<()> {
+    pub fn deactivate(&mut self, updated_by: Option<Uuid>) -> Result<()> {
         if self.get_status() == UserStatus::Inactive {
             return Err(anyhow!("El usuario ya está inactivo"));
         }
         
         self.status = UserStatus::Inactive as i16;
-        self.modified_at = Some(Utc::now().naive_utc());
-        self.modified_by = modified_by;
+        self.updated_at = Some(Utc::now());
+        self.updated_by = updated_by;
         
         Ok(())
     }
     
     // Método para suspender el usuario
-    pub fn suspend(&mut self, modified_by: Option<Uuid>) -> Result<()> {
+    pub fn suspend(&mut self, updated_by: Option<Uuid>) -> Result<()> {
         if self.get_status() == UserStatus::Suspended {
             return Err(anyhow!("El usuario ya está suspendido"));
         }
         
         self.status = UserStatus::Suspended as i16;
-        self.modified_at = Some(Utc::now().naive_utc());
-        self.modified_by = modified_by;
+        self.updated_at = Some(Utc::now());
+        self.updated_by = updated_by;
         
         Ok(())
     }
@@ -146,7 +146,7 @@ impl User {
         first_name: Option<String>, 
         last_name: Option<String>, 
         email: Option<String>,
-        modified_by: Option<Uuid>
+        updated_by: Option<Uuid>
     ) -> Result<()> {
         let mut changed = false;
         
@@ -175,18 +175,18 @@ impl User {
         }
         
         if changed {
-            self.modified_at = Some(Utc::now().naive_utc());
-            self.modified_by = modified_by;
+            self.updated_at = Some(Utc::now());
+            self.updated_by = updated_by;
         }
         
         Ok(())
     }
     
     // Método para cambiar la contraseña (sin validación porque podría estar hasheada)
-    pub fn set_password(&mut self, password: String, modified_by: Option<Uuid>) {
+    pub fn set_password(&mut self, password: String, updated_by: Option<Uuid>) {
         self.password = password;
-        self.modified_at = Some(Utc::now().naive_utc());
-        self.modified_by = modified_by;
+        self.updated_at = Some(Utc::now());
+        self.updated_by = updated_by;
     }
     
     // Método para obtener nombre completo
@@ -297,6 +297,6 @@ mod tests {
         assert_eq!(user.first_name, "Updated");
         assert_eq!(user.last_name, "Name");
         assert_eq!(user.email, "updated@example.com");
-        assert!(user.modified_at.is_some());
+        assert!(user.updated_at.is_some());
     }
 }

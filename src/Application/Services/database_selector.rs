@@ -3,6 +3,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
+use crate::Infrastructure::Persistence::connection_pools::{
+    get_default_sqlx_db_name_sync, // Cambiado a la versión síncrona
+    get_sqlx_pool,
+};
+use log::debug;
 
 // Servicio para seleccionar la base de datos según la lógica de negocio
 pub struct DatabaseSelector {
@@ -56,10 +61,15 @@ impl DatabaseSelector {
 // Singleton para acceso global al selector de bases de datos
 lazy_static! {
     static ref DB_SELECTOR: Arc<Mutex<DatabaseSelector>> = {
-        let default_db = crate::Infrastructure::Persistence::database::get_default_database_name()
-            .unwrap_or_else(|| "main".to_string());
+        // Usar la función síncrona y manejar el Option
+        let default_db_name = get_default_sqlx_db_name_sync()
+            .unwrap_or_else(|| {
+                // Si no hay default configurado (o aún no está listo), usar "main"
+                log::warn!("No se encontró nombre de DB SQLx por defecto en get_default_sqlx_db_name_sync. Usando 'main'.");
+                "main".to_string()
+            });
         Arc::new(Mutex::new(
-            DatabaseSelector::new(&default_db)
+            DatabaseSelector::new(&default_db_name)
         ))
     };
 }
